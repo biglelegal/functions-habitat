@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "baseUrl": "",
+  "paths": {
+    "@web-app": [
+      "app"
+    ],
+    "@web-app/*": [
+      "app/*"
+    ],
+    "@environment-app": [
+      "environments/environment.ts"
+    ]
+  }
+}
