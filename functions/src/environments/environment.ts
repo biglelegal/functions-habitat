@@ -16,8 +16,8 @@ export const environment = {
   apiUrl: 'bigle-plataform-habitat.firebaseapp.com',
   singleSignOn: '',
   integration: {
-    // url: 'http://localhost:5000/bigle-plataform-coldwellbanker/us-central1/integration',
-    url: 'https://us-central1-bigle-plataform-coldwellbanker.cloudfunctions.net/integration',
+    // url: 'http://localhost:5000/bigle-plataform-habitat/us-central1/integration',
+    url: 'https://us-central1-bigle-plataform-habitat.cloudfunctions.net/integration',
     societies: 'getSocieties'
   },
 };
