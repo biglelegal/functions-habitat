@@ -7,11 +7,11 @@ admin.initializeApp({
     databaseURL: environment_1.environment.databaseURL
 });
 var integration_1 = require("./app/functions/integration");
-exports.integration = integration_1.integration;
+Object.defineProperty(exports, "integration", { enumerable: true, get: function () { return integration_1.integration; } });
 var password_1 = require("./app/functions/password");
-exports.changePassword = password_1.changePassword;
+Object.defineProperty(exports, "changePassword", { enumerable: true, get: function () { return password_1.changePassword; } });
 var users_1 = require("./app/functions/users");
-exports.createCustomToken = users_1.createCustomToken;
-exports.createUser = users_1.createUser;
-exports.deleteUser = users_1.deleteUser;
+Object.defineProperty(exports, "createCustomToken", { enumerable: true, get: function () { return users_1.createCustomToken; } });
+Object.defineProperty(exports, "createUser", { enumerable: true, get: function () { return users_1.createUser; } });
+Object.defineProperty(exports, "deleteUser", { enumerable: true, get: function () { return users_1.deleteUser; } });
 //# sourceMappingURL=index.js.map

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.LegalPerson = void 0;
 const address_1 = require("./address");
 const naturalPerson_1 = require("./naturalPerson");
 const registryData_1 = require("./registryData");

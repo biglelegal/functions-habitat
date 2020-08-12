@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.integration = void 0;
 const functions = require("firebase-functions");
 const getUrlService_1 = require("./getUrlService");
 const societies_1 = require("./societies");

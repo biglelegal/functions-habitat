@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.handelAxiosError = exports.getUniqueId = exports.logMessage = exports.getErrorResponse = exports.errorResponse = void 0;
 const entities_1 = require("../entities");
 function errorResponse(message, error) {
     const functionResponse = new entities_1.FunctionResponse();

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.LogInfo = void 0;
 class LogInfo {
     constructor(process, reqId) {
         this.process = '';

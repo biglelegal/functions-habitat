@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getSocieties = void 0;
 const admin = require("firebase-admin");
 const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");

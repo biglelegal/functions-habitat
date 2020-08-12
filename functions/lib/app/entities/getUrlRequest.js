@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.GetUrlRequest = void 0;
 class GetUrlRequest {
     constructor() {
         this.type = null;

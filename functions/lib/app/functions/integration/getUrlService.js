@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getUrl = void 0;
 const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");
 const environment_1 = require("../../../environments/environment");

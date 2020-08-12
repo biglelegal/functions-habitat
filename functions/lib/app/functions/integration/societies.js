@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getSocietiesService = void 0;
 const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");
 const logInfo_1 = require("../../entities/logInfo");

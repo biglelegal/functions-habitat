@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.createCustomToken = exports.createUser = exports.deleteUser = void 0;
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
 const entities_1 = require("../entities");

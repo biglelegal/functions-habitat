@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.NaturalPerson = void 0;
 const address_1 = require("./address");
 class NaturalPerson {
     constructor() {
