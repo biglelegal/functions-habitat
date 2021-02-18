@@ -2,11 +2,12 @@ import { Response } from 'express';
 import { FunctionResponse } from '../entities';
 import { LogInfo } from '../entities/logInfo';
 
-export function errorResponse(message: string, error?: any): FunctionResponse {
+export function errorResponse(logInfo: LogInfo, message: string, error?: any): FunctionResponse {
     const functionResponse: FunctionResponse = new FunctionResponse();
     functionResponse.result = false;
     functionResponse.message = message;
     functionResponse.stackTrace = error;
+    logMessage(logInfo, 'Error', functionResponse.toString());
     return functionResponse;
 }
 
@@ -44,4 +45,16 @@ export function handelAxiosError(error: any) {
         // console.log('Axios response', util.inspect(error.response));
     }
     console.log('Axios Error', error.message);
+}
+
+export function isEmpty(obj: any): boolean {
+    if (!obj) {
+        return true;
+    }
+    for (const prop in obj) {
+        if (obj.hasOwnProperty(prop)) {
+            return false;
+        }
+    }
+    return JSON.stringify(obj) === JSON.stringify({});
 }

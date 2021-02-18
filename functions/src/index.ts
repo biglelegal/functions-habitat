@@ -6,6 +6,7 @@ admin.initializeApp({
     databaseURL: environment.databaseURL
 });
 
+export { getMainDocumentData } from './app/functions/documentData';
 export { integration } from './app/functions/integration';
 export { changePassword } from './app/functions/password';
 export { createCustomToken, createUser, deleteUser } from './app/functions/users';

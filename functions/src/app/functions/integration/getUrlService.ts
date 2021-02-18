@@ -27,18 +27,25 @@ function validateRequest(axiosRequest: GetUrlRequest): Observable<string> {
     if (!axiosRequest.type) {
         return throwError('type_not_found');
     }
-    if (axiosRequest.type !== 'Legal') {
+    if (axiosRequest.type !== 'Legal' && axiosRequest.type !== 'Block') {
         return throwError('wrong_type');
     }
-    if (['societies'].indexOf(axiosRequest.crmId) === -1) {
+    if (['societies', 'compraventa'].indexOf(axiosRequest.crmId) === -1) {
         return throwError('wrong_crmid');
     }
     return of(null);
 }
 
 function getUrlRersponse(axiosRequest: GetUrlRequest): Observable<GetUrlResponse> {
-        const axiosResponse: GetUrlResponse = new GetUrlResponse();
-                axiosResponse.url = `${environment.integration.url}/${environment.integration.societies}`;
-        axiosResponse.method = 'get';
-        return of(axiosResponse);
+    const axiosResponse: GetUrlResponse = new GetUrlResponse();
+    switch (axiosRequest.type) {
+        case 'Legal':
+            axiosResponse.url = `${environment.integration.url}/${environment.integration.societies}`;
+            axiosResponse.method = 'get';
+            return of(axiosResponse);
+        default:
+            axiosResponse.url = `${environment.integration.url}/${environment.integration.compraventa}/${axiosRequest.params}`;
+            axiosResponse.method = 'get';
+            return of(axiosResponse);
+    }
 }

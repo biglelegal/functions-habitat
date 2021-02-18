@@ -18,6 +18,11 @@ export const environment = {
   integration: {
     // url: 'http://localhost:5000/bigle-plataform-habitat/us-central1/integration',
     url: 'https://us-central1-bigle-plataform-habitat.cloudfunctions.net/integration',
-    societies: 'getSocieties'
+    societies: 'getSocieties',
+    compraventa: 'getCompraventa'
   },
+  compraventa: {
+    // url: 'https://a0bdd893-b778-4cbe-a3b4-a31c51c934f1.mock.pstmn.io'
+    url: 'https://ws.habitat.es:8200/sap/bc/srt/wsdl/flv_10002A111AD1/bndg_url/sap/bc/srt/rfc/sap/zhab_wscon_get_data_solicitud/100/zhab_wscon_get_data_solicitud/zhab_wscon_get_data_solicitud_binding?sap-client=100'
+  }
 };
