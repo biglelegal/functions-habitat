@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { from, Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { PromotionHabitat } from '../entities';
 import { Society } from '../entities/blocks/society';
 
 export function getSocieties(): Observable<Array<Society>> {
@@ -18,6 +19,31 @@ export function getSocieties(): Observable<Array<Society>> {
                         }
                     );
                     return societiesList;
+                }
+            ),
+            catchError(
+                error => {
+                    return of(null);
+                }
+            )
+        );
+}
+
+export function getPromotionHabitatByCodPromo(codPromo: string): Observable<PromotionHabitat> {
+    return from(admin.firestore().collection(`promotionBuildings`).where('codigoPromocion', '==', codPromo).get())
+        .pipe(
+            map(
+                societiesDB => {
+                    if (!societiesDB) {
+                        return null;
+                    }
+                    const societiesList: Array<PromotionHabitat> = new Array<PromotionHabitat>();
+                    societiesDB.forEach(
+                        inmuebleDB => {
+                            societiesList.push(inmuebleDB.data() as PromotionHabitat);
+                        }
+                    );
+                    return societiesList[0];
                 }
             ),
             catchError(

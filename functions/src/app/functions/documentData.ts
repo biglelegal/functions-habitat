@@ -3,7 +3,9 @@ import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import * as soap from 'soap';
 import { environment } from '../../environments/environment';
+import { PromotionHabitat } from '../entities';
 import { LogInfo } from '../entities/logInfo';
+import { getPromotionHabitatByCodPromo } from '../utils/firebase';
 import { errorResponse, getUniqueId, isEmpty, logMessage } from '../utils/utils';
 import moment = require('moment');
 // CORS Express middleware to enable CORS Requests.
@@ -89,7 +91,7 @@ function getCompraventaData(logInfo: LogInfo, codigoReserva: string): Observable
         );
 }
 
-function getSAPData(logInfo: LogInfo, codigoReserva: string): Observable<SAPData> {
+function getSAPData(logInfo: LogInfo, codigoReserva: string): Observable<{ sapData: SAPData, promotion: PromotionHabitat }> {
     const auth = `Basic ${Buffer.from('WS_BIGLE:BIGLESAP2021').toString('base64')}`;
     return from(soap.createClientAsync(environment.compraventa.url, { wsdl_headers: { Authorization: auth } }))
         .pipe(
@@ -102,6 +104,20 @@ function getSAPData(logInfo: LogInfo, codigoReserva: string): Observable<SAPData
             ),
             map(
                 result => result[0] as SAPData
+            ),
+            switchMap(
+                sapData => {
+                    if (!sapData || !sapData.OUTPUT || !sapData.OUTPUT.DATOSPRO || !sapData.OUTPUT.DATOSPRO.CPROMO) {
+                        return of({ sapData: sapData, promotion: null })
+                    }
+                    const codPromo: string = sapData.OUTPUT.DATOSPRO.CPROMO
+                    return getPromotionHabitatByCodPromo(codPromo)
+                        .pipe(
+                            map(
+                                promotion => ({ sapData: sapData, promotion: promotion })
+                            )
+                        )
+                }
             ),
             tap(
                 result => {
@@ -121,25 +137,26 @@ function cleanUpEmpties(rawXML: string): string {
     return (rawXML || '').replace(/\n *<[A-Z0-9_]* \/>/g, '');
 }
 
-function processSAPData(sapData: SAPData): Observable<unknown> {
-    if (!sapData || !sapData.OUTPUT) {
+function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat }): Observable<unknown> {
+    if (!data.sapData || !data.sapData.OUTPUT) {
         return of({});
     }
-    // if (sapData.OUTPUT.DATOSSOL && (!sapData.OUTPUT.DATOSSOL.STPBC || Number(sapData.OUTPUT.DATOSSOL.STPBC) !== 1)) {
+    // if (data.sapData.OUTPUT.DATOSSOL && (!data.sapData.OUTPUT.DATOSSOL.STPBC || Number(data.sapData.OUTPUT.DATOSSOL.STPBC) !== 1)) {
     //     return throwError('Error PBC KO ')
     // }
     return of({
-        comprador: getCompradores(sapData.OUTPUT),
+        comprador: getCompradores(data.sapData.OUTPUT),
         inmueble: [{}],
-        // inmuebles: getInmueble(sapData.OUTPUT),
-        ...getDonDh(sapData.OUTPUT),
-        cargas: getCargasOption(sapData.OUTPUT),
-        ...getNotarioipoteca(sapData.OUTPUT),
-        ...getPromocion(sapData.OUTPUT),
-        arquitecto: getArquitectos(sapData.OUTPUT),
-        ...getConstructora(sapData.OUTPUT),
-        ...getDivisionHorizontal(sapData.OUTPUT),
-        ...getDatosPago(sapData.OUTPUT)
+        // inmuebles: getInmueble(data.sapData.OUTPUT),
+        ...getDonDh(data.sapData.OUTPUT),
+        cargas: getCargasOption(data.sapData.OUTPUT),
+        ...getNotarioipoteca(data.sapData.OUTPUT),
+        ...getPromocion(data.sapData.OUTPUT),
+        arquitecto: getArquitectos(data.sapData.OUTPUT),
+        ...getConstructora(data.sapData.OUTPUT),
+        ...getDivisionHorizontal(data.sapData.OUTPUT),
+        ...getDatosPago(data.sapData.OUTPUT),
+        ...data.promotion
     });
 }
 
