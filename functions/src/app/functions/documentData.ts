@@ -1,4 +1,5 @@
 import * as functions from 'firebase-functions';
+import { chain as _chain } from 'lodash';
 import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import * as soap from 'soap';
@@ -35,7 +36,11 @@ const getMainDocumentDataService = (request, response, next): Promise<any> => {
         ).catch(
             err => {
                 logMessage(logInfo, 'Error integrateCRM', err);
-                response.status(500).json(errorResponse(logInfo, 'Error integrateCRM', err));
+                if (typeof err === 'string') {
+                    response.status(500).json(errorResponse(logInfo, err, 'Error integrateCRM'));
+                } else {
+                    response.status(500).json(errorResponse(logInfo, 'Error integrateCRM', err));
+                }
             }
         );
 };
@@ -74,7 +79,7 @@ function getCompraventaData(logInfo: LogInfo, codigoReserva: string): Observable
     if (errorValidation) {
         return throwError(errorValidation);
     }
-    return getSAPData(logInfo, codigoReserva)
+    return getData(logInfo, codigoReserva)
         .pipe(
             switchMap(
                 rawData => processSAPData(rawData)
@@ -91,33 +96,12 @@ function getCompraventaData(logInfo: LogInfo, codigoReserva: string): Observable
         );
 }
 
-function getSAPData(logInfo: LogInfo, codigoReserva: string): Observable<{ sapData: SAPData, promotion: PromotionHabitat }> {
+function getData(logInfo: LogInfo, codigoReserva: string): Observable<{ sapData: SAPData, promotion: PromotionHabitat }> {
     const auth = `Basic ${Buffer.from('WS_BIGLE:BIGLESAP2021').toString('base64')}`;
-    return from(soap.createClientAsync(environment.compraventa.url, { wsdl_headers: { Authorization: auth } }))
+    return from(soap.createClientAsync(environment.compraventa.url, { wsdl_headers: { Authorization: auth }, wsdl_options: { timeout: 15000 } }))
         .pipe(
             switchMap(
-                client => {
-                    const body = client.describe().zhab_wscon_get_data_solicitud.zhab_wscon_get_data_solicitud_binding.ZCWS_WS_GET_DATA_SOLICITUD.input;
-                    client.setSecurity(new soap.BasicAuthSecurity('WS_BIGLE', 'BIGLESAP2021'));
-                    return from(client.ZCWS_WS_GET_DATA_SOLICITUDAsync({ INPUT: { ISOLIC: codigoReserva } }));
-                }
-            ),
-            map(
-                result => result[0] as SAPData
-            ),
-            switchMap(
-                sapData => {
-                    if (!sapData || !sapData.OUTPUT || !sapData.OUTPUT.DATOSPRO || !sapData.OUTPUT.DATOSPRO.CPROMO) {
-                        return of({ sapData: sapData, promotion: null })
-                    }
-                    const codPromo: string = sapData.OUTPUT.DATOSPRO.CPROMO
-                    return getPromotionHabitatByCodPromo(codPromo)
-                        .pipe(
-                            map(
-                                promotion => ({ sapData: sapData, promotion: promotion })
-                            )
-                        )
-                }
+                client => getSAPData(client, codigoReserva)
             ),
             tap(
                 result => {
@@ -126,21 +110,75 @@ function getSAPData(logInfo: LogInfo, codigoReserva: string): Observable<{ sapDa
             ),
             catchError(
                 error => {
-                    console.error('Error getSAPData', error);
-                    return throwError('Error getSAPData');
+                    console.error('Error getData', error);
+                    return throwError(error);
                 }
             )
         );
 }
 
-function cleanUpEmpties(rawXML: string): string {
-    return (rawXML || '').replace(/\n *<[A-Z0-9_]* \/>/g, '');
+function getSAPData(client: soap.Client, codigoReserva: string) {
+    return getWSData(client, codigoReserva)
+        .pipe(
+            switchMap(
+                sapData => getPromotionData(sapData)
+                    .pipe(
+                        map(
+                            promotion => ({ sapData: sapData, promotion: promotion })
+                        )
+                    )
+            )
+
+        );
+}
+
+function getWSData(client: soap.Client, codigoReserva: string): Observable<SAPData> {
+    client.setSecurity(new soap.BasicAuthSecurity('WS_BIGLE', 'BIGLESAP2021'));
+    return from(client.ZCWS_WS_GET_DATA_SOLICITUDAsync({ INPUT: { ISOLIC: codigoReserva } }))
+        .pipe(
+            map(
+                result => result[0] as SAPData
+            ),
+            tap(
+                data => console.log('getWSData data', data)
+            ),
+            switchMap(
+                data => {
+                    if (!data.OUTPUT) {
+                        return throwError('No OUTPUT found');
+                    }
+                    if (data.OUTPUT.RESULT && data.OUTPUT.RESULT.SUBRC) {
+                        return processWSError(data);
+                    }
+                    return of(data);
+                }
+            ),
+            catchError(
+                error => {
+                    console.error('Error getWSData', error);
+                    return throwError(error);
+                }
+            )
+        )
+}
+
+function processWSError(data: SAPData): Observable<SAPData> {
+    const errorMessage = new Array<ItemMessage>().concat(data.OUTPUT.RESULT.MESSAGE.item)
+        .map(
+            item => item.MESSAGE
+        ).join(',');
+    return throwError(errorMessage);
+}
+
+function getPromotionData(sapData: SAPData): Observable<PromotionHabitat> {
+    if (!sapData || !sapData.OUTPUT || !sapData.OUTPUT.DATOSPRO || !sapData.OUTPUT.DATOSPRO.CPROMO) {
+        return of(null);
+    }
+    const codPromo: string = sapData.OUTPUT.DATOSPRO.CPROMO;
+    return getPromotionHabitatByCodPromo(codPromo)
 }
 
 function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat }): Observable<unknown> {
-    if (!data.sapData || !data.sapData.OUTPUT) {
-        return of({});
-    }
     // if (data.sapData.OUTPUT.DATOSSOL && (!data.sapData.OUTPUT.DATOSSOL.STPBC || Number(data.sapData.OUTPUT.DATOSSOL.STPBC) !== 1)) {
     //     return throwError('Error PBC KO ')
     // }
@@ -172,21 +210,22 @@ function getCompradores(OUTPUT: OUTPUT): unknown[] {
     return clientes.map(cliente => getComprador(cliente, totalClients));
 }
 
-function getComprador(cliente: ItemCliente, totalClients: number): { compradorPersonType: string; compradorGender: string; compradorName: string; compradorLastName1: string; compradorRegimen: string; compradorPercentage: number; compradorIdentificationType: string; compradorIdentificationNumber: string; compradorPhoneNumber: string; compradorEmail: string; compradorStreet: string; compradorCity: string; compradorCp: string; compradorCountry: string; } {
+function getComprador(cliente: ItemCliente, totalClients: number): unknown {
     return {
         compradorPersonType: Number(cliente.TYPE) === 1 ? 'legalPerson' : 'naturalPerson',
         compradorGender: cliente.SEX === '1' ? 'F' : 'M',
         compradorName: getStringValue(cliente, 'NAME2'),
         compradorLastName1: getStringValue(cliente, 'NAME1'),
-        compradorRegimen: getCivilStatus(cliente.MARITAL_ST),
+        compradorRegimen: getCivilStatus(cliente.PROPRTY_ST),
+        compradorRegimenSoltero: getMaritalStatus(cliente.MARITAL_ST),
         compradorPercentage: (totalClients > 1) ? getNumberValue(cliente, 'PRELA') : 0,
         compradorIdentificationType: 'DNI',
         compradorIdentificationNumber: getStringValue(cliente, 'SORT1'),
         compradorPhoneNumber: getStringValue(cliente, 'TELF1'),
-        compradorEmail: getStringValue(cliente, 'ZZSMTP_ADDR1'),
+        compradorEmail: getStringValue(cliente, 'SMTP_ADDR'),
         compradorStreet: getStringValue(cliente, 'STRAS'),
         compradorCity: getStringValue(cliente, 'ORT01'),
-        compradorCp: getStringValue(cliente, 'PSTLZ'),
+        compradorCP: getStringValue(cliente, 'PSTLZ'),
         compradorCountry: getCountry(cliente)
     };
 }
@@ -201,11 +240,13 @@ function getDonDh(OUTPUT: OUTPUT): any {
         obraNuevaNotaryName: getStringValue(notarioObraNueva, 'NAME2'),
         obraNuevaNotaryLastName1: getStringValue(notarioObraNueva, 'NAME1'),
         obraNuevaCity: getStringValue(notarioObraNueva, 'ORT01'),
+        obraNuevaCp: getStringValue(notarioObraNueva, 'PSTLZ'),
         obraNuevaGrantingDate: formatDate(fechas30, 'FREAL'),
         obraNuevaProtocolNumber: getStringValue(notarioObraNueva, 'CPROTOC'),
         phNotaryName: getStringValue(notarioph, 'NAME2'),
         phNotaryLastName1: getStringValue(notarioph, 'NAME1'),
         phNotaryCity: getStringValue(notarioph, 'ORT01'),
+        phNotaryCp: getStringValue(notarioph, 'PSTLZ'),
         phNotaryGrantingDate: formatDate(fechas34, 'FREAL'),
         phNotaryProtocolNumber: getStringValue(notarioph, 'CPROTOC')
     }
@@ -235,6 +276,7 @@ function getPromocion(OUTPUT: OUTPUT): any {
         promocionNumberViviendas: getNumberValue(OUTPUT.DATOSPRO, 'NUMVIV'),
         promocionNumberPlazas: getNumberValue(OUTPUT.DATOSPRO, 'NUMGAR'),
         promocionNumberLocales: getNumberValue(OUTPUT.DATOSPRO, 'NUMLOC'),
+        promocionNumberTrasteros: getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
         promocionDateLicencia: formatDate(fechas20, 'FREAL'),
         promocionAyuntamientoLicencia: joinNames(ayuntamiento),
         promocionNumberExpediente: getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
@@ -302,17 +344,17 @@ function getDivisionHorizontal(OUTPUT: OUTPUT): any {
 }
 
 function getDatosPago(OUTPUT: OUTPUT): any {
-    const arras = getCCondi(OUTPUT, 'PS');
-    const contrato = getCCondi(OUTPUT, 'PF');
+    const arras = getCCondis(OUTPUT, 'PS');
+    const contrato = getCCondis(OUTPUT, 'PF');
     const pagosCuenta = getCCondis(OUTPUT, 'PC');
     const fechas34 = getCCLFecha(OUTPUT, 'A4');
     const price = reduceNumberValue(getUnidades(OUTPUT), 'QIMPSOL');
     return {
         price: price,
         tipo: price ? getFixedNumber(reduceNumberValue(getUnidades(OUTPUT), 'QIMPTOT') * 100 / price) : 0,
-        arrasPago: getNumberValue(arras, 'QIMPNET'),
-        dateArrasPago: formatDate(arras, 'FVALI'),
-        amountEntregadaPago: getNumberValue(contrato, 'QIMPNET'),
+        arrasPago: reduceNumberValue(arras, 'QIMPNET'),
+        dateArrasPago: getMaxDate(arras, 'FVALI'),
+        amountEntregadaPago: reduceNumberValue(contrato, 'QIMPNET'),
         amountEntregada2Pago: reduceNumberValue(pagosCuenta, 'QIMPNET'),
         fechaMaxima: formatDate(fechas34, 'FREAL'),
         formaPago: getFormaPago(pagosCuenta),
@@ -351,6 +393,23 @@ function getCivilStatus(civilStatus: string): string {
             return 'participacion';
         default:
             return 'no';
+    }
+}
+
+function getMaritalStatus(civilStatus: string): string {
+    switch (civilStatus) {
+        case '01':
+            return 'soltero';
+        case '02':
+            return 'casado';
+        case '03':
+            return 'viudo';
+        case '04':
+            return 'divorciado';
+        case '05':
+            return 'separado';
+        default:
+            return 'soltero';
     }
 }
 
@@ -414,7 +473,7 @@ function getFormaPago(conditions: Array<ItemConditions>): string {
         return 'a';
     }
     const someDomiciliado: boolean = conditions.some(x => x.CVPAGO === 'S');
-    if (everyDomiciliado) {
+    if (someDomiciliado) {
         return 'b';
     }
     return 'c';
@@ -422,15 +481,18 @@ function getFormaPago(conditions: Array<ItemConditions>): string {
 
 
 function getTablaDesglose(conditions: Array<ItemConditions>): Array<unknown> {
-    return conditions.map(
-        condition => ({
-            tablaDesgloseDatePago: formatDate(condition, 'FVALI'),
-            tablaDesgloseImporteNeto: getNumberValue(condition, 'QIMPNET'),
-            tablaDesgloseImporteIva: getNumberValue(condition, 'QIMPIVA'),
-            tablaDesgloseImporteTotal: getNumberValue(condition, 'QIMPTOT'),
-            tablaDesgloseMedioPago: condition.CVPAGO === 'S' ? 'Domiciliado' : 'Transferencia'
-        })
-    )
+    return _chain(conditions)
+        .groupBy('FVALI')
+        .map(
+            groupCondtion => ({
+                tablaDesgloseDatePago: Math.max(...groupCondtion.map(x => formatDate(x, 'FVALI'))),
+                tablaDesgloseImporteNeto: groupCondtion.map(x => getNumberValue(x, 'QIMPNET')).reduce((a, b) => a + b, 0),
+                tablaDesgloseImporteIva: groupCondtion.map(x => getNumberValue(x, 'QIMPIVA')).reduce((a, b) => a + b, 0),
+                tablaDesgloseImporteTotal: groupCondtion.map(x => getNumberValue(x, 'QIMPTOT')).reduce((a, b) => a + b, 0),
+                tablaDesgloseMedioPago: groupCondtion.map(x => x.CVPAGO).every(x => x === 'S') ? 'Domiciliado' : 'Transferencia'
+            })
+        )
+        .value()
 }
 
 
@@ -537,6 +599,13 @@ function reduceNumberValue<T, K extends keyof T>(value: Array<T>, field: K): num
     const reducedValue: number = value
         .map(x => Number(x[field] || 0))
         .reduce((total, next) => total + (next), 0);
+    return getFixedNumber(reducedValue);
+}
+
+function getMaxDate<T, K extends keyof T>(value: Array<T>, field: K): number {
+    const reducedValue: number = value
+        .map(x => formatDate(x, field))
+        .reduce((total, next) => total = Math.max(total, next), 0);
     return getFixedNumber(reducedValue);
 }
 
@@ -661,7 +730,7 @@ export interface ItemCliente {
     REGIO?: string;
     LAND1?: string;
     TELF1?: string;
-    ZZSMTP_ADDR1?: string;
+    SMTP_ADDR?: string;
     PRELA?: string;
 }
 export interface UNIDADES {
