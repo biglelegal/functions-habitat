@@ -184,11 +184,11 @@ function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat })
     // }
     return of({
         comprador: getCompradores(data.sapData.OUTPUT),
-        inmueble: [{}],
+        inmueble: [{ ...data.promotion }],
         // inmuebles: getInmueble(data.sapData.OUTPUT),
         ...getDonDh(data.sapData.OUTPUT),
         cargas: getCargasOption(data.sapData.OUTPUT),
-        ...getNotarioipoteca(data.sapData.OUTPUT),
+        ...getNotarioipoteca(data.sapData.OUTPUT, data.promotion),
         ...getPromocion(data.sapData.OUTPUT),
         arquitecto: getArquitectos(data.sapData.OUTPUT),
         ...getConstructora(data.sapData.OUTPUT),
@@ -252,7 +252,7 @@ function getDonDh(OUTPUT: OUTPUT): any {
     }
 }
 
-function getNotarioipoteca(OUTPUT: OUTPUT): any {
+function getNotarioipoteca(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
     const notario = getRoleType(OUTPUT, 'ZUN2');
     const fechasC4 = getCCLFecha(OUTPUT, 'C4');
     const fechasC8 = getCCLFecha(OUTPUT, 'C8');
@@ -263,7 +263,8 @@ function getNotarioipoteca(OUTPUT: OUTPUT): any {
         hipotecaNotaryLastName1: getStringValue(notario, 'NAME1'),
         hipotecaProtocolNumber: getStringValue(notario, 'CPROTOC'),
         hipotecaGrantingDate: formatDate(fechasC4, 'FREAL'),
-        hipoGrantingDate: formatDate(fechasC8, 'FREAL')
+        hipoGrantingDate: formatDate(fechasC8, 'FREAL'),
+        contentCargas: promotion.contentCargas
     }
 }
 
