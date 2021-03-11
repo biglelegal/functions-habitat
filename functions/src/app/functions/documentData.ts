@@ -1,13 +1,12 @@
 import * as functions from 'firebase-functions';
 import { chain as _chain } from 'lodash';
-import { from, Observable, of, throwError } from 'rxjs';
+import { combineLatest, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
-import * as soap from 'soap';
-import { environment } from '../../environments/environment';
 import { PromotionHabitat } from '../entities';
 import { LogInfo } from '../entities/logInfo';
-import { getPromotionHabitatByCodPromo } from '../utils/firebase';
+import { getPromotionHabitatByUid } from '../utils/firebase';
 import { errorResponse, getUniqueId, isEmpty, logMessage } from '../utils/utils';
+import { getSAPData } from './integration/compraventa';
 import moment = require('moment');
 // CORS Express middleware to enable CORS Requests.
 const cors = require('cors')({ origin: true });
@@ -19,7 +18,7 @@ const getMainDocumentDataService = (request, response, next): Promise<any> => {
     logMessage(logInfo, 'init integrateCRM');
 
     const crm: string = request.body.crm;
-    const requestParams: { codigoReserva: string } = request.body.params;
+    const requestParams: { codigoReserva: string, uid: string } = request.body.params;
 
     const errorValidation = validateRequest(crm, requestParams, logInfo);
     if (errorValidation) {
@@ -45,7 +44,7 @@ const getMainDocumentDataService = (request, response, next): Promise<any> => {
         );
 };
 
-function validateRequest(crm: string, requestParams: { codigoReserva: string }, logInfo: LogInfo): string {
+function validateRequest(crm: string, requestParams: { codigoReserva: string, uid: string }, logInfo: LogInfo): string {
     if (!crm) {
         logMessage(logInfo, 'Error', 'crm_not_found');
         return 'crm_not_found';
@@ -62,27 +61,31 @@ function validateRequest(crm: string, requestParams: { codigoReserva: string }, 
         logMessage(logInfo, 'Error', 'codigoReserva_not_found');
         return 'codigoReserva_not_found';
     }
+    if (!requestParams.uid) {
+        logMessage(logInfo, 'Error', 'uid_not_found');
+        return 'uid_not_found';
+    }
     return null;
 }
 
-function getDocumentData(logInfo, crm: string, requestParams: { codigoReserva: string }): Observable<any> {
+function getDocumentData(logInfo, crm: string, requestParams: { codigoReserva: string, uid: string }): Observable<any> {
     switch (crm) {
         case 'compraventa':
-            return getCompraventaData(logInfo, requestParams.codigoReserva as string);
+            return getCompraventaData(logInfo, requestParams.codigoReserva as string, requestParams.uid as string);
     }
     return throwError('wrong_crm');
 }
 
-function getCompraventaData(logInfo: LogInfo, codigoReserva: string): Observable<any> {
+function getCompraventaData(logInfo: LogInfo, codigoReserva: string, uid: string): Observable<any> {
 
     const errorValidation = validateRequestCompraventa(codigoReserva, logInfo);
     if (errorValidation) {
         return throwError(errorValidation);
     }
-    return getData(logInfo, codigoReserva)
+    return getCompraventaWSData(codigoReserva, uid)
         .pipe(
             switchMap(
-                rawData => processSAPData(rawData)
+                rawData => processSAPData(rawData, codigoReserva)
             ),
             tap(
                 compraventa => console.log(JSON.stringify(compraventa))
@@ -96,89 +99,20 @@ function getCompraventaData(logInfo: LogInfo, codigoReserva: string): Observable
         );
 }
 
-function getData(logInfo: LogInfo, codigoReserva: string): Observable<{ sapData: SAPData, promotion: PromotionHabitat }> {
-    const auth = `Basic ${Buffer.from('WS_BIGLE:BIGLESAP2021').toString('base64')}`;
-    return from(soap.createClientAsync(environment.compraventa.url, { wsdl_headers: { Authorization: auth }, wsdl_options: { timeout: 15000 } }))
-        .pipe(
-            switchMap(
-                client => getSAPData(client, codigoReserva)
-            ),
-            tap(
-                result => {
-                    console.log('result', result);
-                }
-            ),
-            catchError(
-                error => {
-                    console.error('Error getData', error);
-                    return throwError(error);
-                }
-            )
-        );
-}
-
-function getSAPData(client: soap.Client, codigoReserva: string) {
-    return getWSData(client, codigoReserva)
-        .pipe(
-            switchMap(
-                sapData => getPromotionData(sapData)
-                    .pipe(
-                        map(
-                            promotion => ({ sapData: sapData, promotion: promotion })
-                        )
-                    )
-            )
-
-        );
-}
-
-function getWSData(client: soap.Client, codigoReserva: string): Observable<SAPData> {
-    client.setSecurity(new soap.BasicAuthSecurity('WS_BIGLE', 'BIGLESAP2021'));
-    return from(client.ZCWS_WS_GET_DATA_SOLICITUDAsync({ INPUT: { ISOLIC: codigoReserva } }))
+function getCompraventaWSData(codigoReserva: string, uid: string) {
+    return combineLatest([
+        getSAPData(codigoReserva),
+        getPromotionHabitatByUid(uid)
+    ])
         .pipe(
             map(
-                result => result[0] as SAPData
-            ),
-            tap(
-                data => console.log('getWSData data', data)
-            ),
-            switchMap(
-                data => {
-                    if (!data.OUTPUT) {
-                        return throwError('No OUTPUT found');
-                    }
-                    if (data.OUTPUT.RESULT && data.OUTPUT.RESULT.SUBRC) {
-                        return processWSError(data);
-                    }
-                    return of(data);
-                }
-            ),
-            catchError(
-                error => {
-                    console.error('Error getWSData', error);
-                    return throwError(error);
-                }
+                ([sapData, promotion]) => ({ sapData: sapData, promotion: promotion })
             )
-        )
+
+        );
 }
 
-function processWSError(data: SAPData): Observable<SAPData> {
-    const errorMessage = new Array<ItemMessage>().concat(data.OUTPUT.RESULT.MESSAGE.item)
-        .map(
-            item => item.MESSAGE
-        ).join(',');
-    return throwError(errorMessage);
-}
-
-function getPromotionData(sapData: SAPData): Observable<PromotionHabitat> {
-    if (!sapData || !sapData.OUTPUT || !sapData.OUTPUT.DATOSPRO || !sapData.OUTPUT.DATOSPRO.CPROMO) {
-        return of(null);
-    }
-    const codPromo: string = sapData.OUTPUT.DATOSPRO.CPROMO;
-    return getPromotionHabitatByCodPromo(codPromo)
-}
-
-function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat }): Observable<unknown> {
+function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat }, codigoReserva: string): Observable<unknown> {
     // if (data.sapData.OUTPUT.DATOSSOL && (!data.sapData.OUTPUT.DATOSSOL.STPBC || Number(data.sapData.OUTPUT.DATOSSOL.STPBC) !== 1)) {
     //     return throwError('Error PBC KO ')
     // }
@@ -194,11 +128,28 @@ function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat })
         ...getConstructora(data.sapData.OUTPUT),
         ...getDivisionHorizontal(data.sapData.OUTPUT),
         ...getDatosPago(data.sapData.OUTPUT),
-        ...data.promotion
+        ...data.promotion,
+        name: getDocumentName(data.sapData.OUTPUT, data.promotion, codigoReserva)
     });
 }
 
-function getCompradores(OUTPUT: OUTPUT): unknown[] {
+function getDocumentName(OUTPUT: OUTPUT, promotion: PromotionHabitat, codigoReserva: string) {
+    const compradores = getCompradores(OUTPUT);
+    const firstComprador = compradores ? compradores[0] : null;
+    const vivendas = getCCLUnidades(OUTPUT, '01');
+    const inmuebles = getInmuebleHorizontal(vivendas);
+    const firstInmueble = inmuebles ? inmuebles[0] : null;
+    let name = `${promotion.nombrePromocion} - ${codigoReserva}`;
+    if (firstInmueble) {
+        name += ` - ${firstInmueble.horizontalDescription}`
+    }
+    if (firstComprador) {
+        name += ` - ${firstComprador.compradorName} ${firstComprador.compradorLastName1}`
+    }
+    return name;
+}
+
+function getCompradores(OUTPUT: OUTPUT) {
     if (!OUTPUT.CLIENTES || !OUTPUT.CLIENTES.item) {
         return [];
     }
@@ -210,7 +161,7 @@ function getCompradores(OUTPUT: OUTPUT): unknown[] {
     return clientes.map(cliente => getComprador(cliente, totalClients));
 }
 
-function getComprador(cliente: ItemCliente, totalClients: number): unknown {
+function getComprador(cliente: ItemCliente, totalClients: number) {
     return {
         compradorPersonType: Number(cliente.TYPE) === 1 ? 'legalPerson' : 'naturalPerson',
         compradorGender: cliente.SEX === '1' ? 'F' : 'M',
@@ -264,7 +215,7 @@ function getNotarioipoteca(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
         hipotecaProtocolNumber: getStringValue(notario, 'CPROTOC'),
         hipotecaGrantingDate: formatDate(fechasC4, 'FREAL'),
         hipoGrantingDate: formatDate(fechasC8, 'FREAL'),
-        contentCargas: promotion.contentCargas
+        contentCargas: promotion ? promotion.contentCargas : ''
     }
 }
 
@@ -364,7 +315,7 @@ function getDatosPago(OUTPUT: OUTPUT): any {
 }
 
 
-function getInmuebleHorizontal(inmuebles: Array<ItemUnidades>): unknown[] {
+function getInmuebleHorizontal(inmuebles: Array<ItemUnidades>) {
     return inmuebles.map(inmueble => ({
         horizontalDescription: getStringValue(inmueble, 'TUNID'),
         horizontalPrice: getNumberValue(inmueble, 'QIMPSOL'),
@@ -379,7 +330,11 @@ function getInmuebleHorizontal(inmuebles: Array<ItemUnidades>): unknown[] {
         horizontalTerraza: getNumberValue(inmueble, 'QSTEPR') > 0 ? 'yes' : 'no',
         horizontalTerrazaSurface: getNumberValue(inmueble, 'QSTEPR'),
         horizontalTerrazaSurfaceExterior: getNumberValue(inmueble, 'QSJAPR'),
-        horizontalPlanta: getNumberValue(inmueble, 'QSJAPR')
+        horizontalBlock: getStringValue(inmueble, 'CBLOQ'),
+        horizontalStair: getStringValue(inmueble, 'CESC'),
+        horizontalPortal: getStringValue(inmueble, 'CPORT'),
+        horizontalFloor: getStringValue(inmueble, 'CPLANT'),
+        horizontalDoor: getStringValue(inmueble, 'CNUM')
     }));
 }
 

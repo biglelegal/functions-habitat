@@ -29,7 +29,7 @@ export function getSocieties(): Observable<Array<Society>> {
         );
 }
 
-export function getPromotionHabitatByCodPromo(codPromo: string): Observable<PromotionHabitat> {
+export function getPromotionHabitatByCodPromo(codPromo: string): Observable<Array<PromotionHabitat>> {
     return from(admin.firestore().collection(`promotionBuildings`).where('codigoPromocion', '==', codPromo).get())
         .pipe(
             map(
@@ -43,7 +43,26 @@ export function getPromotionHabitatByCodPromo(codPromo: string): Observable<Prom
                             societiesList.push(inmuebleDB.data() as PromotionHabitat);
                         }
                     );
-                    return societiesList[0];
+                    return societiesList;
+                }
+            ),
+            catchError(
+                error => {
+                    return of(null);
+                }
+            )
+        );
+}
+
+export function getPromotionHabitatByUid(uid: string): Observable<PromotionHabitat> {
+    return from(admin.firestore().doc(`promotionBuildings/${uid}`).get())
+        .pipe(
+            map(
+                societiesDB => {
+                    if (!societiesDB) {
+                        return null;
+                    }
+                    return societiesDB.data() as PromotionHabitat;
                 }
             ),
             catchError(
