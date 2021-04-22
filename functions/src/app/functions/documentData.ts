@@ -118,18 +118,18 @@ function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat },
     // }
     return of({
         comprador: getCompradores(data.sapData.OUTPUT),
-        inmueble: [{ ...data.promotion }],
-        // inmuebles: getInmueble(data.sapData.OUTPUT),
-        ...getDonDh(data.sapData.OUTPUT),
-        cargas: getCargasOption(data.sapData.OUTPUT),
-        ...getNotarioipoteca(data.sapData.OUTPUT, data.promotion),
+        // ...getDonDh(data.sapData.OUTPUT),
+        // cargas: getCargasOption(data.sapData.OUTPUT),
+        // ...getNotarioipoteca(data.sapData.OUTPUT, data.promotion),
         ...getPromocion(data.sapData.OUTPUT),
         arquitecto: getArquitectos(data.sapData.OUTPUT),
-        ...getConstructora(data.sapData.OUTPUT),
+        // ...getConstructora(data.sapData.OUTPUT),
         ...getDivisionHorizontal(data.sapData.OUTPUT),
         ...getDatosPago(data.sapData.OUTPUT),
+        // clausula: [{}],
         ...data.promotion,
-        name: getDocumentName(data.sapData.OUTPUT, data.promotion, codigoReserva)
+        name: getDocumentName(data.sapData.OUTPUT, data.promotion, codigoReserva),
+        codigoReserva: codigoReserva
     });
 }
 
@@ -155,8 +155,8 @@ function getCompradores(OUTPUT: OUTPUT) {
     }
     const clientes: Array<ItemCliente> = getClientes(OUTPUT);
     const totalClients = clientes.length;
-    if (clientes[0] && clientes[0].MARITAL_ST === '01' && clientes[0].PROPRTY_ST === '01') {
-
+    if (clientes[0] && clientes[0].MARITAL_ST === '02' && clientes[0].PROPRTY_ST === '01' && totalClients === 2) {
+        return [{ ...getComprador(clientes[0], 1), ...getConyuge(clientes[1]) }];
     }
     return clientes.map(cliente => getComprador(cliente, totalClients));
 }
@@ -179,6 +179,18 @@ function getComprador(cliente: ItemCliente, totalClients: number) {
         compradorCP: getStringValue(cliente, 'PSTLZ'),
         compradorCountry: getCountry(cliente)
     };
+}
+
+function getConyuge(cliente: ItemCliente) {
+    return {
+        compradorGanacialesGender: cliente.SEX === '1' ? 'F' : 'M',
+        compradorGanacialesName: getStringValue(cliente, 'NAME2'),
+        compradorGanacialesLastName1: getStringValue(cliente, 'NAME1'),
+        compradorGanacialesIdentificationType: 'DNI',
+        compradorGanacialesIdentificationNumber: getStringValue(cliente, 'SORT1'),
+        compradorGanacialesPhoneNumber: getStringValue(cliente, 'TELF1'),
+        compradorGanacialesEmail: getStringValue(cliente, 'SMTP_ADDR')
+    }
 }
 
 function getDonDh(OUTPUT: OUTPUT): any {
@@ -299,18 +311,41 @@ function getDatosPago(OUTPUT: OUTPUT): any {
     const arras = getCCondis(OUTPUT, 'PS');
     const contrato = getCCondis(OUTPUT, 'PF');
     const pagosCuenta = getCCondis(OUTPUT, 'PC');
-    const fechas34 = getCCLFecha(OUTPUT, 'A4');
+    const condiPE = getCCondis(OUTPUT, 'PE');
     const price = reduceNumberValue(getUnidades(OUTPUT), 'QIMPSOL');
+    const priceIva = reduceNumberValue(getUnidades(OUTPUT), 'QIMPTOT');
+    const priceTotal = price + priceIva;
+    const amountArras = reduceNumberValue(arras, 'QIMPNET');
+    const amountIvaArras = reduceNumberValue(arras, 'QIMPIVA');
+    const amountTotalArras = reduceNumberValue(arras, 'QIMPTOT');
+    const amountEntregadaPago = reduceNumberValue(contrato, 'QIMPNET');
+    const amountIvaPago = reduceNumberValue(contrato, 'QIMPIVA');
+    const amountTotalPago = reduceNumberValue(contrato, 'QIMPTOT');
+    const amountEntregada2Pago = reduceNumberValue(pagosCuenta, 'QIMPNET');
+    const amountIva2Pago = reduceNumberValue(pagosCuenta, 'QIMPIVA');
+    const amountTotal2Pago = reduceNumberValue(pagosCuenta, 'QIMPTOT');
+    const amountPosteriorPago = price - (amountArras + amountEntregadaPago + amountEntregada2Pago);
+    const ivaPosteriorPago = priceIva - (amountIvaArras + amountIvaPago + amountIva2Pago);
+    const totalPosteriorPago = priceTotal - (amountTotalArras + amountTotalPago + amountTotal2Pago);
     return {
         price: price,
-        tipo: price ? getFixedNumber(reduceNumberValue(getUnidades(OUTPUT), 'QIMPTOT') * 100 / price) : 0,
-        arrasPago: reduceNumberValue(arras, 'QIMPNET'),
+        tipo: price ? getFixedNumber(priceIva * 100 / price) : 0,
+        priceIva: priceIva,
+        priceTotal: price + priceIva,
+        arrasPago: amountArras,
         dateArrasPago: getMaxDate(arras, 'FVALI'),
-        amountEntregadaPago: reduceNumberValue(contrato, 'QIMPNET'),
-        amountEntregada2Pago: reduceNumberValue(pagosCuenta, 'QIMPNET'),
-        fechaMaxima: formatDate(fechas34, 'FREAL'),
+        amountEntregadaPago: amountEntregadaPago,
+        amountIvaPago: amountIvaPago + amountIvaArras,
+        amountTotalPago: amountTotalPago + amountIvaArras,
+        amountEntregada2Pago: amountEntregada2Pago,
+        amountIva2Pago: amountIva2Pago,
+        amountTotal2Pago: amountTotal2Pago,
+        fechaMaxima: getMaxDate(condiPE, 'FVALI'),
         formaPago: getFormaPago(pagosCuenta),
-        tablaDesglose: getTablaDesglose(pagosCuenta)
+        tablaDesglose: getTablaDesglose(pagosCuenta),
+        amountPosteriorPago: amountPosteriorPago,
+        ivaPosteriorPago: ivaPosteriorPago,
+        totalPosteriorPago: totalPosteriorPago
     };
 }
 

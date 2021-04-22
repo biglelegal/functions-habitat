@@ -1,22 +1,58 @@
+
 export class PromotionHabitat {
     uid: string = '';
+    active: boolean = false;
     nombrePromocion: string = '';
     codigoPromocion: string = '';
     sociedad: string = '';
     cuentaBancaria: string = '';
     entidadBancaria: string = '';
     contentCargas: string = '';
-    descripcionFinca: string = '';
-    tituloFinca: string = '';
-    lugarEscritura: string = '';
-    numRegistroPropiedad: string = '';
-    tomo: number;
-    libro: number;
-    folio: number;
-    inscripcion: number;
-    numeroFinca: number;
+    inmueble: Array<{
+        descripcionFinca: string,
+        tituloFinca: string,
+        lugarEscritura: string,
+        numRegistroPropiedad: string,
+        numeroFinca: number,
+    }> = [{
+        descripcionFinca: '',
+        tituloFinca: '',
+        lugarEscritura: '',
+        numRegistroPropiedad: '',
+        numeroFinca: 0,
+
+    }]
     notarioGenero: string = '';
     nombreNotario: string = '';
-    apellidoNotario: string = '';
-    apellido2Notario: string = '';
+    calleNotario: string = '';
+    numeroNotario: string = '';
+    ciudadNotario: string = '';
+    cpNotario: string = '';
+    escriturasPublicas: string = '';
+    notarioGeneroHorizontal: string = '';
+    nombreNotarioHorizontal: string = '';
+    apellidoNotarioHorizontal: string = '';
+    localityNotarioHorizontal: string = '';
+    dateNotarioHorizontal: number;
+    protocoloNotarioHorizontal: string = '';
+    notarioGeneroObraNueva: string = '';
+    nombreNotarioObraNueva: string = '';
+    apellidoNotarioObraNueva: string = '';
+    localityNotarioObraNueva: string = '';
+    dateNotarioObraNueva: number;
+    protocoloNotarioObraNueva: string = '';
+    constructora: string = '';
+    denominacionSocial: string = '';
+    numeroIdentificacion: string = '';
+    calle: string = '';
+    ciudad: string = '';
+    cp: string = '';
+    constructoraRegistryCity: string = '';
+    constructoraRegistrySheet: string = '';
+    adicional: string = '';
+    tituloClausula: string = '';
+    contenidoClausula: string = '';
+    static extract(item: PromotionHabitat): any {
+        return JSON.parse(JSON.stringify(item));
+    }
 }

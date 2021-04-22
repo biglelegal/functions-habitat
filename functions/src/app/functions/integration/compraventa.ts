@@ -85,9 +85,12 @@ export function getSAPData(codigoReserva: string): Observable<SAPData> {
                     if (!data.OUTPUT) {
                         return throwError('No OUTPUT found');
                     }
-                    if (data.OUTPUT.RESULT && data.OUTPUT.RESULT.SUBRC) {
-                        return processWSError(data);
-                    }
+                    // if (data.OUTPUT.RESULT && data.OUTPUT.RESULT.MESSAGE && data.OUTPUT.RESULT.MESSAGE.item && new Array<ItemMessage>().concat(data.OUTPUT.RESULT.MESSAGE.item).length) {
+                    //     return processWSError(data);
+                    // }
+                    // if (data.OUTPUT.DATOSSOL && (!data.OUTPUT.DATOSSOL.STPBC || Number(data.OUTPUT.DATOSSOL.STPBC) !== 1)) {
+                    //     return throwError('Error PBC KO ')
+                    // }
                     return of(data);
                 }
             ),
@@ -104,7 +107,7 @@ function processWSError(data: SAPData): Observable<SAPData> {
     const errorMessage = new Array<ItemMessage>().concat(data.OUTPUT.RESULT.MESSAGE.item)
         .map(
             item => item.MESSAGE
-        ).join(',');
+        ).join(', ');
     return throwError(errorMessage);
 }
 

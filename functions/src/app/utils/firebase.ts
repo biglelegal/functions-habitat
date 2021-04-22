@@ -30,7 +30,7 @@ export function getSocieties(): Observable<Array<Society>> {
 }
 
 export function getPromotionHabitatByCodPromo(codPromo: string): Observable<Array<PromotionHabitat>> {
-    return from(admin.firestore().collection(`promotionBuildings`).where('codigoPromocion', '==', codPromo).get())
+    return from(admin.firestore().collection(`promotionBuildings`).where('codigoPromocion', '==', codPromo).where('active', '==', true).where('activeForFinancial', '==', true).get())
         .pipe(
             map(
                 societiesDB => {
