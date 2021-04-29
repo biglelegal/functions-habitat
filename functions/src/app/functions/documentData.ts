@@ -241,6 +241,7 @@ function getPromocion(OUTPUT: OUTPUT): any {
         promocionNumberPlazas: getNumberValue(OUTPUT.DATOSPRO, 'NUMGAR'),
         promocionNumberLocales: getNumberValue(OUTPUT.DATOSPRO, 'NUMLOC'),
         promocionNumberTrasteros: getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
+        promocionNumberBicicletas: getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
         promocionDateLicencia: formatDate(fechas20, 'FREAL'),
         promocionAyuntamientoLicencia: joinNames(ayuntamiento),
         promocionNumberExpediente: getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
@@ -671,6 +672,7 @@ export interface DATOSPRO {
     NUMVIV?: string;
     NUMGAR?: string;
     NUMTRAS?: string;
+    NUMBICI?: string;
     NUMLOC?: string;
     NUMOFIC?: string;
     CLICEN?: string;
