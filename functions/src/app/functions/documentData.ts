@@ -237,6 +237,8 @@ function getPromocion(OUTPUT: OUTPUT): any {
     const provincia = getStringValue(OUTPUT.DATOSPRO, 'CDELEG');
     return {
         promocionAndalucia: ['IP4061', 'IP4062'].includes(provincia) ? 'yes' : 'no',
+        promocionCatalunya: ['IP4040'].includes(provincia) ? 'yes' : 'no',
+        promocionLevante: ['IP4050'].includes(provincia) ? 'yes' : 'no',
         promocionNumberViviendas: getNumberValue(OUTPUT.DATOSPRO, 'NUMVIV'),
         promocionNumberPlazas: getNumberValue(OUTPUT.DATOSPRO, 'NUMGAR'),
         promocionNumberLocales: getNumberValue(OUTPUT.DATOSPRO, 'NUMLOC'),
