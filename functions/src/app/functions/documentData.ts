@@ -258,6 +258,7 @@ function getArquitectos(OUTPUT: OUTPUT) {
     return arquitectos.map(x => ({
         arquitectoName: joinNames(x),
         arquitectoNumeroColegiado: getStringValue(x, 'SFRT8'),
+        ciudadColegiado: getStringValue(x, 'CIUDAD'),
         arquitectoStreet: getStringValue(x, 'STRAS'),
         arquitectoCity: getStringValue(x, 'ORT01'),
         arquitectoCp: getStringValue(x, 'PSTLZ')
@@ -705,6 +706,7 @@ export interface ItemDatosInt {
     PROPRTY_ST?: string;
     CPROTOC?: string;
     ORT01?: string;
+    CIUDAD?: string;
 }
 export interface CLIENTES {
     item?: ItemCliente | Array<ItemCliente>;
