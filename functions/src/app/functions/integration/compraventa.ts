@@ -85,7 +85,7 @@ export function getSAPData(codigoReserva: string): Observable<SAPData> {
                     if (!data.OUTPUT) {
                         return throwError('No OUTPUT found');
                     }
-                    if (data.OUTPUT.RESULT && data.OUTPUT.RESULT.MESSAGE && data.OUTPUT.RESULT.MESSAGE.item && new Array<ItemMessage>().concat(data.OUTPUT.RESULT.MESSAGE.item).length) {
+                    if (data.OUTPUT.RESULT && Number(data.OUTPUT.RESULT.SUBRC) !== 0 && data.OUTPUT.RESULT.MESSAGE && data.OUTPUT.RESULT.MESSAGE.item && new Array<ItemMessage>().concat(data.OUTPUT.RESULT.MESSAGE.item).length) {
                         return processWSError(data);
                     }
                     // if (data.OUTPUT.DATOSSOL && (!data.OUTPUT.DATOSSOL.STPBC || Number(data.OUTPUT.DATOSSOL.STPBC) !== 1)) {
