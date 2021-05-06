@@ -29,21 +29,18 @@ export function getSocieties(): Observable<Array<Society>> {
         );
 }
 
-export function getPromotionHabitatByCodPromo(codPromo: string): Observable<Array<PromotionHabitat>> {
-    return from(admin.firestore().collection(`promotionBuildings`).where('codigoPromocion', '==', codPromo).where('active', '==', true).where('activeForFinancial', '==', true).get())
+export function getPromotionHabitatByCodPromo(codPromo: string): Observable<PromotionHabitat> {
+    return from(admin.firestore().collection(`promotionBuildings`).where('codigoPromocion', '==', codPromo).get())
         .pipe(
             map(
-                societiesDB => {
-                    if (!societiesDB) {
+                promotionsDB => promotionsDB.docs.map(e => e.data() as PromotionHabitat)
+            ),
+            map(
+                promotionsDB => {
+                    if (!promotionsDB || !promotionsDB.length) {
                         return null;
                     }
-                    const societiesList: Array<PromotionHabitat> = new Array<PromotionHabitat>();
-                    societiesDB.forEach(
-                        inmuebleDB => {
-                            societiesList.push(inmuebleDB.data() as PromotionHabitat);
-                        }
-                    );
-                    return societiesList;
+                    return promotionsDB[0];
                 }
             ),
             catchError(

@@ -33,20 +33,17 @@ export const getCompraventaService = (request: Request, response: Response): Pro
 
 
 
-export function getCompraventaWSData(codigoReserva: string): Observable<Array<{ codigoReserva: string } & PromotionHabitat>> {
+export function getCompraventaWSData(codigoReserva: string): Observable<{ codigoReserva: string } & PromotionHabitat> {
     return getSAPData(codigoReserva)
         .pipe(
             switchMap(
                 sapData => getPromotionData(sapData)
                     .pipe(
                         map(
-                            promotions => promotions
-                                .map(
-                                    promotion => ({
-                                        ...promotion,
-                                        codigoReserva: codigoReserva
-                                    })
-                                )
+                            promotion => ({
+                                ...promotion,
+                                codigoReserva: codigoReserva
+                            })
                         )
                     )
             ),
@@ -111,7 +108,7 @@ function processWSError(data: SAPData): Observable<SAPData> {
     return throwError(errorMessage);
 }
 
-export function getPromotionData(sapData: SAPData): Observable<Array<PromotionHabitat>> {
+export function getPromotionData(sapData: SAPData): Observable<PromotionHabitat> {
     if (!sapData || !sapData.OUTPUT || !sapData.OUTPUT.DATOSPRO || !sapData.OUTPUT.DATOSPRO.CPROMO) {
         return throwError(`No existe código de promoción para esta reserva`);
     }
@@ -119,11 +116,17 @@ export function getPromotionData(sapData: SAPData): Observable<Array<PromotionHa
     return getPromotionHabitatByCodPromo(codPromo)
         .pipe(
             switchMap(
-                promotions => {
-                    if (!promotions || !promotions.length) {
-                        return throwError(`Promoción ${sapData.OUTPUT.DATOSPRO.CPROMO} no definida`);
+                promotion => {
+                    if (!promotion) {
+                        return throwError(`No existe ninguna promoción con el código ${codPromo}`);
                     }
-                    return of(promotions);
+                    if (!promotion.active) {
+                        return throwError(`La promoción ${promotion.nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Legal`);
+                    }
+                    if (!promotion.activeForFinancial) {
+                        return throwError(`La promoción ${promotion.nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Financiero`);
+                    }
+                    return of(promotion);
                 }
             )
         )
