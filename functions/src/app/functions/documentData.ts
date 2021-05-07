@@ -127,6 +127,7 @@ function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat },
         ...getDivisionHorizontal(data.sapData.OUTPUT),
         ...getDatosPago(data.sapData.OUTPUT),
         // clausula: [{}],
+        horizontal: getHorizontal(data.promotion.escriturasPublicas),
         ...data.promotion,
         name: getDocumentName(data.sapData.OUTPUT, data.promotion, codigoReserva),
         codigoReserva: codigoReserva
@@ -284,7 +285,7 @@ function getDivisionHorizontal(OUTPUT: OUTPUT): any {
     const motos = getCCLUnidades(OUTPUT, '21');
     const bicicletas = getCCLUnidades(OUTPUT, '23');
     return {
-        horizontal: getDivisionHorizontalOption(OUTPUT),
+        // horizontal: getDivisionHorizontalOption(OUTPUT), ya no se utiliza CCLFECHA 34 para mirar esto. Se mira escriturasPublicas de los datos de una promocion
         horizontalYesCheckActivos: {
             activoVivienda1: !!vivendas.length,
             activoParking1: !!garajes.length,
@@ -306,8 +307,11 @@ function getDivisionHorizontal(OUTPUT: OUTPUT): any {
         car: getInmuebleHorizontal(garajes),
         traster: getInmuebleHorizontal(trasteros),
         house: getInmuebleHorizontal(vivendas),
+        regis: getInmuebleHorizontalDatosRegistrales(vivendas),
         parqueo: getInmuebleHorizontal(garajes),
-        tras: getInmuebleHorizontal(trasteros)
+        regi: getInmuebleHorizontalDatosRegistrales(garajes),
+        tras: getInmuebleHorizontal(trasteros),
+        reg: getInmuebleHorizontalDatosRegistrales(trasteros),
     };
 }
 
@@ -375,6 +379,11 @@ function getInmuebleHorizontal(inmuebles: Array<ItemUnidades>) {
         horizontalFloor: getStringValue(inmueble, 'CPLANT'),
         horizontalDoor: getStringValue(inmueble, 'CNUM')
     }));
+}
+
+
+function getInmuebleHorizontalDatosRegistrales(inmuebles: Array<ItemUnidades>) {
+    return inmuebles.map(inmueble => ({}));
 }
 
 
@@ -614,6 +623,13 @@ function validateRequestCompraventa(codigoReserva: string, logInfo: LogInfo): st
         return 'Codigo_reserva_not_found';
     }
     return null;
+}
+
+function getHorizontal(escriturasPublicas: string) {
+    if (escriturasPublicas === 'ambas') {
+        return 'yes';
+    }
+    return 'no';
 }
 
 app.use(cors);
