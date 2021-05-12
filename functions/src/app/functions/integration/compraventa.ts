@@ -33,17 +33,20 @@ export const getCompraventaService = (request: Request, response: Response): Pro
 
 
 
-export function getCompraventaWSData(codigoReserva: string): Observable<{ codigoReserva: string } & PromotionHabitat> {
+export function getCompraventaWSData(codigoReserva: string): Observable<Array<{ codigoReserva: string } & PromotionHabitat>> {
     return getSAPData(codigoReserva)
         .pipe(
             switchMap(
                 sapData => getPromotionData(sapData)
                     .pipe(
                         map(
-                            promotion => ({
-                                ...promotion,
-                                codigoReserva: codigoReserva
-                            })
+                            promotions => promotions
+                                .map(
+                                    promotion => ({
+                                        ...promotion,
+                                        codigoReserva: codigoReserva
+                                    })
+                                )
                         )
                     )
             ),
@@ -108,7 +111,7 @@ function processWSError(data: SAPData): Observable<SAPData> {
     return throwError(errorMessage);
 }
 
-export function getPromotionData(sapData: SAPData): Observable<PromotionHabitat> {
+export function getPromotionData(sapData: SAPData): Observable<Array<PromotionHabitat>> {
     if (!sapData || !sapData.OUTPUT || !sapData.OUTPUT.DATOSPRO || !sapData.OUTPUT.DATOSPRO.CPROMO) {
         return throwError(`No existe código de promoción para esta reserva`);
     }
@@ -116,17 +119,30 @@ export function getPromotionData(sapData: SAPData): Observable<PromotionHabitat>
     return getPromotionHabitatByCodPromo(codPromo)
         .pipe(
             switchMap(
-                promotion => {
-                    if (!promotion) {
+                promotionsList => {
+                    if (!promotionsList.length) {
                         return throwError(`No existe ninguna promoción con el código ${codPromo}`);
                     }
-                    if (!promotion.active) {
-                        return throwError(`La promoción ${promotion.nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Legal`);
+
+                    if (promotionsList.length === 1) {
+                        if (!promotionsList[0].active && !promotionsList[0].activeForFinancial) {
+                            return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Legal y por Dpto Financiero`);
+                        }
+                        if (!promotionsList[0].active) {
+                            return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Legal`);
+                        }
+                        if (!promotionsList[0].activeForFinancial) {
+                            return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Financiero`);
+                        }
                     }
-                    if (!promotion.activeForFinancial) {
-                        return throwError(`La promoción ${promotion.nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Financiero`);
+
+                    const newList: Array<PromotionHabitat> = promotionsList.filter(x => x.active && x.activeForFinancial);
+
+                    if (!newList.length) {
+                        return throwError(`No existe ninguna promoción con código ${codPromo} que esté aprobada por Legal y Financiero`);
                     }
-                    return of(promotion);
+
+                    return of(newList);
                 }
             )
         )
