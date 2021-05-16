@@ -124,25 +124,21 @@ export function getPromotionData(sapData: SAPData): Observable<Array<PromotionHa
                         return throwError(`No existe ninguna promoción con el código ${codPromo}`);
                     }
 
-                    if (promotionsList.length === 1) {
-                        if (!promotionsList[0].active && !promotionsList[0].activeForFinancial) {
-                            return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Legal y por Dpto Financiero`);
-                        }
-                        if (!promotionsList[0].active) {
-                            return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Legal`);
-                        }
-                        if (!promotionsList[0].activeForFinancial) {
-                            return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Financiero`);
-                        }
+                    if (promotionsList.length > 1) {
+                        return of(promotionsList);
                     }
 
-                    const newList: Array<PromotionHabitat> = promotionsList.filter(x => x.active && x.activeForFinancial);
-
-                    if (!newList.length) {
-                        return throwError(`No existe ninguna promoción con código ${codPromo} que esté aprobada por Legal y Financiero`);
+                    if (!promotionsList[0].active && !promotionsList[0].activeForFinancial) {
+                        return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Legal y por Dpto Financiero`);
+                    }
+                    if (!promotionsList[0].active) {
+                        return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Legal`);
+                    }
+                    if (!promotionsList[0].activeForFinancial) {
+                        return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Financiero`);
                     }
 
-                    return of(newList);
+                    return of(promotionsList);
                 }
             )
         )
