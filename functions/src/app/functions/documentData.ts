@@ -116,12 +116,21 @@ function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat },
     // if (data.sapData.OUTPUT.DATOSSOL && (!data.sapData.OUTPUT.DATOSSOL.STPBC || Number(data.sapData.OUTPUT.DATOSSOL.STPBC) !== 1)) {
     //     return throwError('Error PBC KO ')
     // }
+
+    if (data.promotion && !data.promotion.active) {
+        return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Legal`);
+    }
+
+    if (data.promotion && !data.promotion.activeForFinancial) {
+        return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Financiero`);
+    }
+
     return of({
         comprador: getCompradores(data.sapData.OUTPUT),
         // ...getDonDh(data.sapData.OUTPUT),
         // cargas: getCargasOption(data.sapData.OUTPUT),
         // ...getNotarioipoteca(data.sapData.OUTPUT, data.promotion),
-        ...getPromocion(data.sapData.OUTPUT),
+        ...getPromocion(data.sapData.OUTPUT, data.promotion),
         arquitecto: getArquitectos(data.sapData.OUTPUT),
         // ...getConstructora(data.sapData.OUTPUT),
         ...getDivisionHorizontal(data.sapData.OUTPUT),
@@ -232,7 +241,7 @@ function getNotarioipoteca(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
     }
 }
 
-function getPromocion(OUTPUT: OUTPUT): any {
+function getPromocion(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
     const fechas20 = getCCLFecha(OUTPUT, '20');
     const ayuntamiento = getRoleType(OUTPUT, 'ZUI1');
     const provincia = getStringValue(OUTPUT.DATOSPRO, 'CDELEG');
@@ -240,11 +249,11 @@ function getPromocion(OUTPUT: OUTPUT): any {
         promocionAndalucia: ['IP4061', 'IP4062'].includes(provincia) ? 'yes' : 'no',
         promocionCatalunya: ['IP4040'].includes(provincia) ? 'yes' : 'no',
         promocionLevante: ['IP4050'].includes(provincia) ? 'yes' : 'no',
-        promocionNumberViviendas: getNumberValue(OUTPUT.DATOSPRO, 'NUMVIV'),
-        promocionNumberPlazas: getNumberValue(OUTPUT.DATOSPRO, 'NUMGAR'),
-        promocionNumberLocales: getNumberValue(OUTPUT.DATOSPRO, 'NUMLOC'),
-        promocionNumberTrasteros: getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
-        promocionNumberBicicletas: getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
+        promocionNumberViviendas: promotion.faseada ? promotion.promocionNumberViviendas : getNumberValue(OUTPUT.DATOSPRO, 'NUMVIV'),
+        promocionNumberPlazas: promotion.faseada ? promotion.promocionNumberPlazas : getNumberValue(OUTPUT.DATOSPRO, 'NUMGAR'),
+        promocionNumberLocales: promotion.faseada ? promotion.promocionNumberLocales : getNumberValue(OUTPUT.DATOSPRO, 'NUMLOC'),
+        promocionNumberTrasteros: promotion.faseada ? promotion.promocionNumberTrasteros : getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
+        promocionNumberBicicletas: promotion.faseada ? promotion.promocionNumberBicicletas : getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
         promocionDateLicencia: formatDate(fechas20, 'FREAL'),
         promocionAyuntamientoLicencia: joinNames(ayuntamiento),
         promocionNumberExpediente: getStringValue(OUTPUT.DATOSPRO, 'CLICEN')

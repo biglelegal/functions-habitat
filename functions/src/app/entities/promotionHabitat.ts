@@ -3,6 +3,7 @@ export class PromotionHabitat {
     uid: string = '';
     active: boolean = false;
     activeForFinancial: boolean = false;
+    faseada: boolean = false;
     nombrePromocion: string = '';
     codigoPromocion: string = '';
     sociedad: string = '';
@@ -53,6 +54,11 @@ export class PromotionHabitat {
     adicional: string = '';
     tituloClausula: string = '';
     contenidoClausula: string = '';
+    promocionNumberViviendas: number = 0;
+    promocionNumberPlazas: number = 0;
+    promocionNumberBicicletas: number = 0;
+    promocionNumberLocales: number = 0;
+    promocionNumberTrasteros: number = 0;
     static extract(item: PromotionHabitat): any {
         return JSON.parse(JSON.stringify(item));
     }
