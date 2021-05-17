@@ -117,6 +117,10 @@ function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat },
     //     return throwError('Error PBC KO ')
     // }
 
+    if (data.promotion && !data.promotion.active && !data.promotion.activeForFinancial) {
+        return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Legal y por Dpto Financiero`);
+    }
+
     if (data.promotion && !data.promotion.active) {
         return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Legal`);
     }
