@@ -59,6 +59,7 @@ export class PromotionHabitat {
     promocionNumberBicicletas: number = 0;
     promocionNumberLocales: number = 0;
     promocionNumberTrasteros: number = 0;
+    promocionNumberExpediente: string = '';
     static extract(item: PromotionHabitat): any {
         return JSON.parse(JSON.stringify(item));
     }

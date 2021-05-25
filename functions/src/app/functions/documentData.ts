@@ -485,15 +485,12 @@ function getFormaPago(conditions: Array<ItemConditions>): string {
     if (!conditions || !conditions.length) {
         return 'c';
     }
+
     const everyDomiciliado: boolean = conditions.every(x => x.CVPAGO === 'S');
     if (everyDomiciliado) {
         return 'a';
     }
-    const someDomiciliado: boolean = conditions.some(x => x.CVPAGO === 'S');
-    if (someDomiciliado) {
-        return 'b';
-    }
-    return 'c';
+    return 'b';
 }
 
 
