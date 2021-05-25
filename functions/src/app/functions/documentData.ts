@@ -260,7 +260,7 @@ function getPromocion(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
         promocionNumberBicicletas: promotion.faseada ? promotion.promocionNumberBicicletas : getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
         promocionDateLicencia: formatDate(fechas20, 'FREAL'),
         promocionAyuntamientoLicencia: joinNames(ayuntamiento),
-        promocionNumberExpediente: getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
+        promocionNumberExpediente: promotion.faseada ? promotion.promocionNumberExpediente : getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
     };
 }
 
