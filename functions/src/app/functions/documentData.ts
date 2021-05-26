@@ -167,15 +167,20 @@ function getCompradores(OUTPUT: OUTPUT) {
     if (!OUTPUT.CLIENTES || !OUTPUT.CLIENTES.item) {
         return [];
     }
+    const representantesOtherName: Array<ItemDatosInt> = getRoleTypesByTwoTypes(OUTPUT, 'YAPO', 'YADM');
+
     const clientes: Array<ItemCliente> = getClientes(OUTPUT);
     const totalClients = clientes.length;
     if (clientes[0] && clientes[0].MARITAL_ST === '02' && clientes[0].PROPRTY_ST === '01' && totalClients === 2) {
-        return [{ ...getComprador(clientes[0], 1), ...getConyuge(clientes[1]) }];
+        return [{ ...getComprador(clientes[0], 1, representantesOtherName), ...getConyuge(clientes[1]) }];
     }
-    return clientes.map(cliente => getComprador(cliente, totalClients));
+    return clientes.map(cliente => getComprador(cliente, totalClients, representantesOtherName));
 }
 
-function getComprador(cliente: ItemCliente, totalClients: number) {
+function getComprador(cliente: ItemCliente, totalClients: number, representantesOtherName: Array<ItemDatosInt>) {
+    const representantes: Array<ItemDatosInt> = representantesOtherName.filter(x => x.KUNNR === cliente.CUSTOMER);
+    const representanteOtherName: boolean = !!representantes && !!representantes.length
+
     return {
         compradorPersonType: Number(cliente.TYPE) === 1 ? 'legalPerson' : 'naturalPerson',
         compradorGender: cliente.SEX === '1' ? 'F' : 'M',
@@ -191,7 +196,19 @@ function getComprador(cliente: ItemCliente, totalClients: number) {
         compradorStreet: getStringValue(cliente, 'STRAS'),
         compradorCity: getStringValue(cliente, 'ORT01'),
         compradorCP: getStringValue(cliente, 'PSTLZ'),
-        compradorCountry: getCountry(cliente)
+        compradorCountry: getCountry(cliente),
+        compradorOwnName: representanteOtherName ? 'Y' : 'N',
+        representado: [].concat(representantes.map(
+            representante => ({
+                nombreRepreComprador: `${getStringValue(representante, 'NAME2')} ${getStringValue(representante, 'NAME1')}`,
+                tipoIdentificacionRepreComprador: 'DNI',
+                numeroIdentificacionRepreComprador: getStringValue(representante, 'SORT1'),
+                lugarNotariaRepreComprador: getStringValue(representante, 'CIUDAD'),
+                nombreNotarioRepreComprador: getStringValue(representante, 'NOTARIO'),
+                fechaOtorgamientoRepreComprador: formatDate(representante, 'FEC_PE'),
+                numeroProtocoloRepreComprador: getStringValue(representante, 'PROTOCOLO')
+            })
+        ))
     };
 }
 
@@ -559,6 +576,11 @@ function getRoleTypes(OUTPUT: OUTPUT, type: string): Array<ItemDatosInt> {
     return datosInt.filter(x => x.ROLETYP === type);
 }
 
+function getRoleTypesByTwoTypes(OUTPUT: OUTPUT, type1: string, type2: string): Array<ItemDatosInt> {
+    const datosInt: Array<ItemDatosInt> = getDatosInt(OUTPUT);
+    return datosInt.filter(x => x.ROLETYP === type1 || x.ROLETYP === type2);
+}
+
 function getCCLUnidades(OUTPUT: OUTPUT, type: string): Array<ItemUnidades> {
     const unidades: Array<ItemUnidades> = getUnidades(OUTPUT);
     return unidades.filter(x => x.CCLUSO === type);
@@ -733,6 +755,10 @@ export interface ItemDatosInt {
     CPROTOC?: string;
     ORT01?: string;
     CIUDAD?: string;
+    KUNNR?: string;
+    NOTARIO?: string;
+    FEC_PE?: unknown;
+    PROTOCOLO?: string;
 }
 export interface CLIENTES {
     item?: ItemCliente | Array<ItemCliente>;
