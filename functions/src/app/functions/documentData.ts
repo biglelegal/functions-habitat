@@ -190,6 +190,7 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
         compradorRegimenSoltero: getMaritalStatus(cliente.MARITAL_ST),
         compradorPercentage: (totalClients > 1) ? getNumberValue(cliente, 'PRELA') : 0,
         compradorIdentificationType: 'DNI',
+        compradorIdentificationTypeJuridica: 'NIF',
         compradorIdentificationNumber: getStringValue(cliente, 'SORT1'),
         compradorPhoneNumber: getStringValue(cliente, 'TELF1'),
         compradorEmail: getStringValue(cliente, 'SMTP_ADDR'),
@@ -208,7 +209,15 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
                 fechaOtorgamientoRepreComprador: formatDate(representante, 'FEC_PE'),
                 numeroProtocoloRepreComprador: getStringValue(representante, 'PROTOCOLO')
             })
-        ))
+        )),
+        // REPRE Persona Juridica
+        nombreRepreComprador: `${getStringValue(representantes[0], 'NAME2')} ${getStringValue(representantes[0], 'NAME1')}`,
+        tipoIdentificacionRepreComprador: 'DNI',
+        numeroIdentificacionRepreComprador: getStringValue(representantes[0], 'SORT1'),
+        lugarNotariaRepreComprador: getStringValue(representantes[0], 'CIUDAD'),
+        nombreNotarioRepreComprador: getStringValue(representantes[0], 'NOTARIO'),
+        fechaOtorgamientoRepreComprador: formatDate(representantes[0], 'FEC_PE'),
+        numeroProtocoloRepreComprador: getStringValue(representantes[0], 'PROTOCOLO')
     };
 }
 
@@ -264,7 +273,6 @@ function getNotarioipoteca(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
 
 function getPromocion(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
     const fechas20 = getCCLFecha(OUTPUT, '20');
-    const ayuntamiento = getRoleType(OUTPUT, 'ZUI1');
     const provincia = getStringValue(OUTPUT.DATOSPRO, 'CDELEG');
     return {
         promocionAndalucia: ['IP4061', 'IP4062'].includes(provincia) ? 'yes' : 'no',
@@ -276,7 +284,7 @@ function getPromocion(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
         promocionNumberTrasteros: promotion.faseada ? promotion.promocionNumberTrasteros : getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
         promocionNumberBicicletas: promotion.faseada ? promotion.promocionNumberBicicletas : getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
         promocionDateLicencia: formatDate(fechas20, 'FREAL'),
-        promocionAyuntamientoLicencia: joinNames(ayuntamiento),
+        promocionAyuntamientoLicencia: getStringValue(OUTPUT.DATOSPRO, 'TREGIS'),
         promocionNumberExpediente: promotion.faseada ? promotion.promocionNumberExpediente : getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
     };
 }
@@ -309,24 +317,26 @@ function getConstructora(OUTPUT: OUTPUT): any {
 }
 
 function getDivisionHorizontal(OUTPUT: OUTPUT): any {
-    const vivendas = getCCLUnidades(OUTPUT, '01');
-    const garajes = getCCLUnidades(OUTPUT, '02');
-    const trasteros = getCCLUnidades(OUTPUT, '03');
+    const viviendas = getCCLUnidades(OUTPUT, '01');
+    const garajes = getNonAnnexedInmuebles(OUTPUT, '02', viviendas);
+    const annexedGarajes = getAnnexedInmuebles(OUTPUT, '02', viviendas);
+    const trasteros = getNonAnnexedInmuebles(OUTPUT, '03', viviendas);
+    const annexedTrasteros = getAnnexedInmuebles(OUTPUT, '03', viviendas);
     const motos = getCCLUnidades(OUTPUT, '21');
     const bicicletas = getCCLUnidades(OUTPUT, '23');
     return {
         // horizontal: getDivisionHorizontalOption(OUTPUT), ya no se utiliza CCLFECHA 34 para mirar esto. Se mira escriturasPublicas de los datos de una promocion
         horizontalYesCheckActivos: {
-            activoVivienda1: !!vivendas.length,
+            activoVivienda1: !!viviendas.length,
             activoParking1: !!garajes.length,
             activoTrastero1: !!trasteros.length
         },
         horizontalNoCheckActivos: {
-            activoVivienda: !!vivendas.length,
+            activoVivienda: !!viviendas.length,
             activoParking: !!garajes.length || !!motos.length || !!bicicletas.length,
             activoTrastero: !!trasteros.length,
         },
-        casa: getInmuebleHorizontal(vivendas),
+        casa: getViviendaHorizontal(viviendas, OUTPUT, annexedGarajes, annexedTrasteros),
         chequePlaza: {
             plazaBicicleta: !!bicicletas.length,
             plazaMotocicleta: !!motos.length,
@@ -336,13 +346,31 @@ function getDivisionHorizontal(OUTPUT: OUTPUT): any {
         moto: getInmuebleHorizontal(motos),
         car: getInmuebleHorizontal(garajes),
         traster: getInmuebleHorizontal(trasteros),
-        house: getInmuebleHorizontal(vivendas),
-        regis: getInmuebleHorizontalDatosRegistrales(vivendas),
+        house: getViviendaHorizontal(viviendas, OUTPUT, annexedGarajes, annexedTrasteros),
+        regis: getInmuebleHorizontalDatosRegistrales(viviendas),
         parqueo: getInmuebleHorizontal(garajes),
+        park: getInmuebleHorizontal(garajes),
         regi: getInmuebleHorizontalDatosRegistrales(garajes),
         tras: getInmuebleHorizontal(trasteros),
         reg: getInmuebleHorizontalDatosRegistrales(trasteros),
     };
+}
+
+function getNonAnnexedInmuebles(OUTPUT: OUTPUT, type: string, viviendas: Array<ItemUnidades>): Array<ItemUnidades> {
+    // Get the garajes/trasteros if they are not annexed to a vivienda
+    return getCCLUnidades(OUTPUT, type)
+        .filter(
+            inmueble => !viviendas.some(x => x.CUDVINC === inmueble.CUNID)
+        );
+}
+
+function getAnnexedInmuebles(OUTPUT: OUTPUT, type: string, viviendas: Array<ItemUnidades>): Array<ItemUnidades> {
+    // Get the vivienda annexed garajes/trasteros
+
+    return getCCLUnidades(OUTPUT, type)
+        .filter(
+            inmueble => viviendas.some(x => x.CUDVINC === inmueble.CUNID)
+        );
 }
 
 function getDatosPago(OUTPUT: OUTPUT): any {
@@ -387,6 +415,31 @@ function getDatosPago(OUTPUT: OUTPUT): any {
     };
 }
 
+function getViviendaHorizontal(inmuebles: Array<ItemUnidades>, OUTPUT: OUTPUT, annexedGarajes: Array<ItemUnidades>, annexedTrasteros: Array<ItemUnidades>) {
+    return inmuebles.map(inmueble => ({
+        horizontalDescription: getStringValue(inmueble, 'TUNID'),
+        horizontalPrice: getNumberValue(inmueble, 'QIMPSOL'),
+        horizontalDescripcion: getStringValue(inmueble, 'DESREG'),
+        horizontalRegistryVolume: getStringValue(inmueble, 'ITOMO'),
+        horizontalRegistryBook: getStringValue(inmueble, 'ILIBRO'),
+        horizontalRegistryPage: getStringValue(inmueble, 'IFOLIO'),
+        horizontalRegistryInscription: getStringValue(inmueble, 'IINSC'),
+        horizontalNumber: getStringValue(inmueble, 'CNUM'),
+        horizontalSurface: getNumberValue(inmueble, 'QSUTIL'),
+        horizontalSurfaceComunes: getNumberValue(inmueble, 'QSCONS'),
+        horizontalTerraza: getNumberValue(inmueble, 'QSTEPR') > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurface: getNumberValue(inmueble, 'QSTEPR'),
+        horizontalTerrazaSurfaceExterior: getNumberValue(inmueble, 'QSJAPR'),
+        horizontalBlock: getStringValue(inmueble, 'CBLOQ'),
+        horizontalStair: getStringValue(inmueble, 'CESC'),
+        horizontalPortal: getStringValue(inmueble, 'CPORT'),
+        horizontalFloor: getStringValue(inmueble, 'CPLANT'),
+        horizontalDoor: getStringValue(inmueble, 'CNUM'),
+        checkAnejos: getCheckAnejos(inmueble, getUnidades(OUTPUT)),
+        anejoParking: getInmuebleHorizontal(annexedGarajes),
+        anejoTrastero: getInmuebleHorizontal(annexedTrasteros),
+    }));
+}
 
 function getInmuebleHorizontal(inmuebles: Array<ItemUnidades>) {
     return inmuebles.map(inmueble => ({
@@ -411,6 +464,14 @@ function getInmuebleHorizontal(inmuebles: Array<ItemUnidades>) {
     }));
 }
 
+
+function getCheckAnejos(inmueble: ItemUnidades, itemUnidades: Array<ItemUnidades>) {
+    // Check if a inmueble Vivienda type has another inmueble as annex
+    return {
+        addParking: inmueble.CCLUSO === '01' ? itemUnidades.some(x => x.CUNID === inmueble.CUDVINC && x.CCLUSO === '02') : false,
+        addTrastero: inmueble.CCLUSO === '01' ? itemUnidades.some(x => x.CUNID === inmueble.CUDVINC && x.CCLUSO === '03') : false
+    };
+}
 
 function getInmuebleHorizontalDatosRegistrales(inmuebles: Array<ItemUnidades>) {
     return inmuebles.map(inmueble => ({}));
@@ -839,3 +900,4 @@ export interface ItemFechas {
     FACTUAL?: string;
     FREAL?: string;
 }
+
