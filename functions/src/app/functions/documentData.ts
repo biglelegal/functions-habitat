@@ -318,12 +318,13 @@ function getConstructora(OUTPUT: OUTPUT): any {
 
 function getDivisionHorizontal(OUTPUT: OUTPUT): any {
     const viviendas = getCCLUnidades(OUTPUT, '01');
-    const garajes = getNonAnnexedInmuebles(OUTPUT, '02', viviendas);
+    const nonAnnexedGarajes = getNonAnnexedInmuebles(OUTPUT, '02', viviendas);
     const annexedGarajes = getAnnexedInmuebles(OUTPUT, '02', viviendas);
     const trasteros = getNonAnnexedInmuebles(OUTPUT, '03', viviendas);
     const annexedTrasteros = getAnnexedInmuebles(OUTPUT, '03', viviendas);
-    const motos = getCCLUnidades(OUTPUT, '21');
-    const bicicletas = getCCLUnidades(OUTPUT, '23');
+    const garajes = nonAnnexedGarajes.filter(x => x.CSUBUSO === '20');
+    const motos = nonAnnexedGarajes.filter(x => x.CSUBUSO === '21');
+    const bicicletas = nonAnnexedGarajes.filter(x => x.CSUBUSO === '23');
     return {
         // horizontal: getDivisionHorizontalOption(OUTPUT), ya no se utiliza CCLFECHA 34 para mirar esto. Se mira escriturasPublicas de los datos de una promocion
         horizontalYesCheckActivos: {
@@ -851,7 +852,7 @@ export interface ItemUnidades {
     CUNID?: string;
     TUNID?: string;
     CCLUSO?: string;
-    CSUBSUSO?: unknown;
+    CSUBUSO?: unknown;
     CBLOQ?: unknown;
     CPLANT?: string;
     CPORT?: string;
