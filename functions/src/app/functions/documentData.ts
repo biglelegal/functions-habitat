@@ -217,7 +217,26 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
         lugarNotariaRepreComprador: getStringValue(representantes[0], 'CIUDAD'),
         nombreNotarioRepreComprador: getStringValue(representantes[0], 'NOTARIO'),
         fechaOtorgamientoRepreComprador: formatDate(representantes[0], 'FEC_PE'),
-        numeroProtocoloRepreComprador: getStringValue(representantes[0], 'PROTOCOLO')
+        numeroProtocoloRepreComprador: getStringValue(representantes[0], 'PROTOCOLO'),
+        // Other repre Persona Jurídica
+        typeRepresentativePower: representantes.length > 1 ? 'jointAgent' : '',
+        nombreOtherRepreComprador: representantes.length > 1 ? `${getStringValue(representantes[1], 'NAME2')} ${getStringValue(representantes[1], 'NAME1')}` : '',
+        tipoIdentificacionOtherRepreComprador: 'DNI',
+        numeroIdentificacionOtherRepreComprador: representantes.length > 1 ? getStringValue(representantes[1], 'SORT1') : '',
+        lugarNotariaOtherRepreComprador: representantes.length > 1 ? getStringValue(representantes[1], 'CIUDAD') : '',
+        nombreNotarioOtherRepreComprador: representantes.length > 1 ? getStringValue(representantes[1], 'NOTARIO') : '',
+        fechaOtorgamientoOtherRepreComprador: representantes.length > 1 ? formatDate(representantes[1], 'FEC_PE') : '',
+        numeroProtocoloOtherRepreComprador: representantes.length > 1 ? getStringValue(representantes[1], 'PROTOCOLO') : '',
+
+        // ESCRITURA CONSTITUCION
+        nombreNotarioConstitucion: getStringValue(cliente, 'NOTARIO'),
+        numeroProtocoloConstitucion: getStringValue(cliente, 'PROTCOLO'),
+        fechaConstitucion: formatDate(cliente, 'FE_CONS'),
+        registryCityConstitucion: getStringValue(cliente, 'REG_MERCANTIL'),
+        tomoConstitucion: getStringValue(cliente, 'ITMO'),
+        libroConstitucion: getStringValue(cliente, 'ILIBR'),
+        hojaConstitucion: getStringValue(cliente, 'IHOJA'),
+        folioConstitucion: getStringValue(cliente, 'IFOLI')
     };
 }
 
@@ -426,11 +445,11 @@ function getViviendaHorizontal(inmuebles: Array<ItemUnidades>, OUTPUT: OUTPUT, a
         horizontalRegistryPage: getStringValue(inmueble, 'IFOLIO'),
         horizontalRegistryInscription: getStringValue(inmueble, 'IINSC'),
         horizontalNumber: getStringValue(inmueble, 'CNUM'),
-        horizontalSurface: getNumberValue(inmueble, 'QSUTIL'),
-        horizontalSurfaceComunes: getNumberValue(inmueble, 'QSCONS'),
+        horizontalSurface: Math.floor(getNumberValue(inmueble, 'QSUTIL') * 10) / 10,
+        horizontalSurfaceComunes: Math.floor(getNumberValue(inmueble, 'QSCONS') * 10) / 10,
         horizontalTerraza: getNumberValue(inmueble, 'QSTEPR') > 0 ? 'yes' : 'no',
-        horizontalTerrazaSurface: getNumberValue(inmueble, 'QSTEPR'),
-        horizontalTerrazaSurfaceExterior: getNumberValue(inmueble, 'QSJAPR'),
+        horizontalTerrazaSurface: Math.floor(getNumberValue(inmueble, 'QSTEPR') * 10) / 10,
+        horizontalTerrazaSurfaceExterior: Math.floor(getNumberValue(inmueble, 'QSJAPR') * 10) / 10,
         horizontalBlock: getStringValue(inmueble, 'CBLOQ'),
         horizontalStair: getStringValue(inmueble, 'CESC'),
         horizontalPortal: getStringValue(inmueble, 'CPORT'),
@@ -452,11 +471,11 @@ function getInmuebleHorizontal(inmuebles: Array<ItemUnidades>) {
         horizontalRegistryPage: getStringValue(inmueble, 'IFOLIO'),
         horizontalRegistryInscription: getStringValue(inmueble, 'IINSC'),
         horizontalNumber: getStringValue(inmueble, 'CNUM'),
-        horizontalSurface: getNumberValue(inmueble, 'QSUTIL'),
-        horizontalSurfaceComunes: getNumberValue(inmueble, 'QSCONS'),
+        horizontalSurface: Math.floor(getNumberValue(inmueble, 'QSUTIL') * 10) / 10,
+        horizontalSurfaceComunes: Math.floor(getNumberValue(inmueble, 'QSCONS') * 10) / 10,
         horizontalTerraza: getNumberValue(inmueble, 'QSTEPR') > 0 ? 'yes' : 'no',
-        horizontalTerrazaSurface: getNumberValue(inmueble, 'QSTEPR'),
-        horizontalTerrazaSurfaceExterior: getNumberValue(inmueble, 'QSJAPR'),
+        horizontalTerrazaSurface: Math.floor(getNumberValue(inmueble, 'QSTEPR') * 10) / 10,
+        horizontalTerrazaSurfaceExterior: Math.floor(getNumberValue(inmueble, 'QSJAPR') * 10) / 10,
         horizontalBlock: getStringValue(inmueble, 'CBLOQ'),
         horizontalStair: getStringValue(inmueble, 'CESC'),
         horizontalPortal: getStringValue(inmueble, 'CPORT'),
@@ -843,6 +862,14 @@ export interface ItemCliente {
     TELF1?: string;
     SMTP_ADDR?: string;
     PRELA?: string;
+    FE_CONS?: string
+    PROTCOLO?: string;
+    NOTARIO?: string;
+    REG_MERCANTIL?: string;
+    ITMO?: string;
+    ILIBR?: string;
+    IHOJA?: string;
+    IFOLI?: string;
 }
 export interface UNIDADES {
     item?: ItemUnidades | Array<ItemUnidades>;
