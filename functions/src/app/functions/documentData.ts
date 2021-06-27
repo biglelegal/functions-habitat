@@ -604,6 +604,7 @@ function getTablaDesglose(conditions: Array<ItemConditions>): Array<unknown> {
                 tablaDesgloseMedioPago: groupCondtion.map(x => x.CVPAGO).every(x => x === 'S') ? 'Domiciliado' : 'Transferencia'
             })
         )
+        .sortBy('tablaDesgloseDatePago')
         .value()
 }
 
