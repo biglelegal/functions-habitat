@@ -232,7 +232,7 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
 
         // ESCRITURA CONSTITUCION
         nombreNotarioConstitucion: getStringValue(cliente, 'NOTARIO'),
-        numeroProtocoloConstitucion: getStringValue(cliente, 'PROTCOLO'),
+        numeroProtocoloConstitucion: getStringValue(cliente, 'PROTOCOLO'),
         fechaConstitucion: formatDate(cliente, 'FE_CONS'),
         registryCityConstitucion: getStringValue(cliente, 'REG_MERCANTIL'),
         tomoConstitucion: getStringValue(cliente, 'ITOMO'),
@@ -865,7 +865,7 @@ export interface ItemCliente {
     SMTP_ADDR?: string;
     PRELA?: string;
     FE_CONS?: string
-    PROTCOLO?: string;
+    PROTOCOLO?: string;
     NOTARIO?: string;
     REG_MERCANTIL?: string;
     ITOMO?: string;
