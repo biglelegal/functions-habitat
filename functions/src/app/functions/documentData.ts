@@ -185,6 +185,8 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
         compradorPersonType: Number(cliente.TYPE) === 1 ? 'legalPerson' : 'naturalPerson',
         compradorGender: cliente.SEX === '1' ? 'F' : 'M',
         compradorName: getStringValue(cliente, 'NAME2'),
+        // For Legal person sometimes send the name in NAME2 and sometimes in NAME1
+        compradorNameJuridica: getStringValue(cliente, 'NAME2') + getStringValue(cliente, 'NAME1'),
         compradorLastName1: getStringValue(cliente, 'NAME1'),
         compradorRegimen: getCivilStatus(cliente.PROPRTY_ST),
         compradorRegimenSoltero: getMaritalStatus(cliente.MARITAL_ST),
@@ -219,7 +221,7 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
         fechaOtorgamientoRepreComprador: formatDate(representantes[0], 'FEC_PE'),
         numeroProtocoloRepreComprador: getStringValue(representantes[0], 'PROTOCOLO'),
         // Other repre Persona Jurídica
-        typeRepresentativePower: representantes.length > 1 ? 'jointAgent' : '',
+        compradorTypeRepresentativePower: representantes.length > 1 ? 'jointAgent' : '',
         nombreOtherRepreComprador: representantes.length > 1 ? `${getStringValue(representantes[1], 'NAME2')} ${getStringValue(representantes[1], 'NAME1')}` : '',
         tipoIdentificacionOtherRepreComprador: 'DNI',
         numeroIdentificacionOtherRepreComprador: representantes.length > 1 ? getStringValue(representantes[1], 'SORT1') : '',
@@ -233,10 +235,10 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
         numeroProtocoloConstitucion: getStringValue(cliente, 'PROTCOLO'),
         fechaConstitucion: formatDate(cliente, 'FE_CONS'),
         registryCityConstitucion: getStringValue(cliente, 'REG_MERCANTIL'),
-        tomoConstitucion: getStringValue(cliente, 'ITMO'),
-        libroConstitucion: getStringValue(cliente, 'ILIBR'),
+        tomoConstitucion: getStringValue(cliente, 'ITOMO'),
+        libroConstitucion: getStringValue(cliente, 'ILIBRO'),
         hojaConstitucion: getStringValue(cliente, 'IHOJA'),
-        folioConstitucion: getStringValue(cliente, 'IFOLI')
+        folioConstitucion: getStringValue(cliente, 'IFOLIO')
     };
 }
 
@@ -866,10 +868,10 @@ export interface ItemCliente {
     PROTCOLO?: string;
     NOTARIO?: string;
     REG_MERCANTIL?: string;
-    ITMO?: string;
-    ILIBR?: string;
+    ITOMO?: string;
+    ILIBRO?: string;
     IHOJA?: string;
-    IFOLI?: string;
+    IFOLIO?: string;
 }
 export interface UNIDADES {
     item?: ItemUnidades | Array<ItemUnidades>;
