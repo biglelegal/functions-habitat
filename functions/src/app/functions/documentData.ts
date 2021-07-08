@@ -136,7 +136,7 @@ function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat },
         // ...getNotarioipoteca(data.sapData.OUTPUT, data.promotion),
         arquitecto: getArquitectos(data.sapData.OUTPUT),
         // ...getConstructora(data.sapData.OUTPUT),
-        ...getDivisionHorizontal(data.sapData.OUTPUT),
+        ...getDivisionHorizontal(data.sapData.OUTPUT, data.promotion.faseada),
         ...getDatosPago(data.sapData.OUTPUT),
         // clausula: [{}],
         ...data.promotion,
@@ -338,7 +338,7 @@ function getConstructora(OUTPUT: OUTPUT): any {
     };
 }
 
-function getDivisionHorizontal(OUTPUT: OUTPUT): any {
+function getDivisionHorizontal(OUTPUT: OUTPUT, promotionFaseada: boolean): any {
     const viviendas = getCCLUnidades(OUTPUT, '01');
     const nonAnnexedGarajes = getNonAnnexedInmuebles(OUTPUT, '02', viviendas);
     const annexedGarajes = getAnnexedInmuebles(OUTPUT, '02', viviendas);
@@ -372,12 +372,12 @@ function getDivisionHorizontal(OUTPUT: OUTPUT): any {
         car: getInmuebleHorizontal(garajes),
         traster: getInmuebleHorizontal(trasteros),
         house: getViviendaHorizontal(viviendas, OUTPUT, annexedGarajes, annexedTrasteros),
-        regis: getInmuebleHorizontalDatosRegistrales(viviendas, numeroRegistro, lugarRegistro),
+        regis: promotionFaseada ? [] : getInmuebleHorizontalDatosRegistrales(viviendas, numeroRegistro, lugarRegistro),
         parqueo: getInmuebleHorizontal(garajes),
         park: getInmuebleHorizontal(garajes),
-        regi: getInmuebleHorizontalDatosRegistrales(garajes, numeroRegistro, lugarRegistro),
+        regi: promotionFaseada ? [] : getInmuebleHorizontalDatosRegistrales(garajes, numeroRegistro, lugarRegistro),
         tras: getInmuebleHorizontal(trasteros),
-        reg: getInmuebleHorizontalDatosRegistrales(trasteros, numeroRegistro, lugarRegistro),
+        reg: promotionFaseada ? [] : getInmuebleHorizontalDatosRegistrales(trasteros, numeroRegistro, lugarRegistro),
         registrales: 'yes',
         registral: 'yes',
         registra: 'yes',
