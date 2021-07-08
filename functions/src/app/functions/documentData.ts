@@ -295,6 +295,7 @@ function getNotarioipoteca(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
 function getPromocion(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
     const fechas20 = getCCLFecha(OUTPUT, '20');
     const provincia = getStringValue(OUTPUT.DATOSPRO, 'CDELEG');
+    const ayuntamientoItem = getRoleType(OUTPUT, 'ZUI1')
     return {
         promocionAndalucia: ['IP4061', 'IP4062'].includes(provincia) ? 'yes' : 'no',
         promocionCatalunya: ['IP4040'].includes(provincia) ? 'yes' : 'no',
@@ -305,7 +306,7 @@ function getPromocion(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
         promocionNumberTrasteros: promotion.faseada ? promotion.promocionNumberTrasteros : getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
         promocionNumberBicicletas: promotion.faseada ? promotion.promocionNumberBicicletas : getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
         promocionDateLicencia: formatDate(fechas20, 'FREAL'),
-        promocionAyuntamientoLicencia: getStringValue(OUTPUT.DATOSPRO, 'TREGIS'),
+        promocionAyuntamientoLicencia: getStringValue(ayuntamientoItem, 'NAME1'),
         promocionNumberExpediente: promotion.faseada ? promotion.promocionNumberExpediente : getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
     };
 }
@@ -346,6 +347,8 @@ function getDivisionHorizontal(OUTPUT: OUTPUT): any {
     const garajes = nonAnnexedGarajes.filter(x => x.CSUBUSO === '20');
     const motos = nonAnnexedGarajes.filter(x => x.CSUBUSO === '21');
     const bicicletas = nonAnnexedGarajes.filter(x => x.CSUBUSO === '23');
+    const numeroRegistro = Number(getStringValue(OUTPUT.DATOSPRO, 'CREGPRO').split('-')[1]);
+    const lugarRegistro = getStringValue(OUTPUT.DATOSPRO, 'TREGIS');
     return {
         // horizontal: getDivisionHorizontalOption(OUTPUT), ya no se utiliza CCLFECHA 34 para mirar esto. Se mira escriturasPublicas de los datos de una promocion
         horizontalYesCheckActivos: {
@@ -369,12 +372,15 @@ function getDivisionHorizontal(OUTPUT: OUTPUT): any {
         car: getInmuebleHorizontal(garajes),
         traster: getInmuebleHorizontal(trasteros),
         house: getViviendaHorizontal(viviendas, OUTPUT, annexedGarajes, annexedTrasteros),
-        regis: getInmuebleHorizontalDatosRegistrales(viviendas),
+        regis: getInmuebleHorizontalDatosRegistrales(viviendas, numeroRegistro, lugarRegistro),
         parqueo: getInmuebleHorizontal(garajes),
         park: getInmuebleHorizontal(garajes),
-        regi: getInmuebleHorizontalDatosRegistrales(garajes),
+        regi: getInmuebleHorizontalDatosRegistrales(garajes, numeroRegistro, lugarRegistro),
         tras: getInmuebleHorizontal(trasteros),
-        reg: getInmuebleHorizontalDatosRegistrales(trasteros),
+        reg: getInmuebleHorizontalDatosRegistrales(trasteros, numeroRegistro, lugarRegistro),
+        registrales: 'yes',
+        registral: 'yes',
+        registra: 'yes',
     };
 }
 
@@ -495,8 +501,13 @@ function getCheckAnejos(inmueble: ItemUnidades, itemUnidades: Array<ItemUnidades
     };
 }
 
-function getInmuebleHorizontalDatosRegistrales(inmuebles: Array<ItemUnidades>) {
-    return inmuebles.map(inmueble => ({}));
+function getInmuebleHorizontalDatosRegistrales(inmuebles: Array<ItemUnidades>, numeroRegistro: number, lugarRegistro: string) {
+    return inmuebles.map(inmueble => ({
+        horizontalRegistryCity: lugarRegistro,
+        horizontalRegistryNumber: numeroRegistro,
+        horizontalRegistryPropertyNumber: getNumberValue(inmueble, 'IFINCA'),
+        cuotaVivienda: getNumberValue(inmueble, 'PCOGEN'),
+    }));
 }
 
 
@@ -905,6 +916,7 @@ export interface ItemUnidades {
     CIVA?: string;
     MSATZ?: string;
     QIMPTOT?: string;
+    PCOGEN?: string;
     CONDITIONS?: CONDITIONS;
 }
 export interface CONDITIONS {
