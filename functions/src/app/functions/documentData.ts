@@ -306,7 +306,7 @@ function getPromocion(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
         promocionNumberTrasteros: promotion.faseada ? promotion.promocionNumberTrasteros : getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
         promocionNumberBicicletas: promotion.faseada ? promotion.promocionNumberBicicletas : getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
         promocionDateLicencia: formatDate(fechas20, 'FREAL'),
-        promocionAyuntamientoLicencia: getStringValue(ayuntamientoItem, 'NAME1'),
+        promocionAyuntamientoLicencia: getStringValue(ayuntamientoItem, 'ORT01'),
         promocionNumberExpediente: promotion.faseada ? promotion.promocionNumberExpediente : getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
     };
 }
@@ -378,9 +378,9 @@ function getDivisionHorizontal(OUTPUT: OUTPUT, promotionFaseada: boolean): any {
         regi: promotionFaseada ? [] : getInmuebleHorizontalDatosRegistrales(garajes, numeroRegistro, lugarRegistro),
         tras: getInmuebleHorizontal(trasteros),
         reg: promotionFaseada ? [] : getInmuebleHorizontalDatosRegistrales(trasteros, numeroRegistro, lugarRegistro),
-        registrales: 'yes',
-        registral: 'yes',
-        registra: 'yes',
+        registrales: promotionFaseada ? '' : 'si',
+        registral: promotionFaseada ? '' : 'si',
+        registra: promotionFaseada ? '' : 'si'
     };
 }
 
