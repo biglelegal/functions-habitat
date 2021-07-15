@@ -385,19 +385,19 @@ function getDivisionHorizontal(OUTPUT: OUTPUT, promotionFaseada: boolean): any {
 }
 
 function getNonAnnexedInmuebles(OUTPUT: OUTPUT, type: string, viviendas: Array<ItemUnidades>): Array<ItemUnidades> {
-    // Get the garajes/trasteros if they are not annexed to a vivienda
+    // Get the garajes/trasteros (from type) if they are not annexed to a vivienda
     return getCCLUnidades(OUTPUT, type)
         .filter(
-            inmueble => !viviendas.some(x => x.CUDVINC === inmueble.CUNID)
+            inmueble => !viviendas.some(x => x.CUNID === inmueble.CUDVINC)
         );
 }
 
 function getAnnexedInmuebles(OUTPUT: OUTPUT, type: string, viviendas: Array<ItemUnidades>): Array<ItemUnidades> {
-    // Get the vivienda annexed garajes/trasteros
+    // Get the vivienda annexed garajes/trasteros (from type)
 
     return getCCLUnidades(OUTPUT, type)
         .filter(
-            inmueble => viviendas.some(x => x.CUDVINC === inmueble.CUNID)
+            inmueble => viviendas.some(x => x.CUNID === inmueble.CUDVINC)
         );
 }
 
@@ -444,9 +444,11 @@ function getDatosPago(OUTPUT: OUTPUT): any {
 }
 
 function getViviendaHorizontal(inmuebles: Array<ItemUnidades>, OUTPUT: OUTPUT, annexedGarajes: Array<ItemUnidades>, annexedTrasteros: Array<ItemUnidades>) {
+    const garajesPrice: number = annexedGarajes.reduce((prev, curr) => prev + getNumberValue(curr, 'QIMPSOL'), 0);
+    const trasterossPrice: number = annexedTrasteros.reduce((prev, curr) => prev + getNumberValue(curr, 'QIMPSOL'), 0);
     return inmuebles.map(inmueble => ({
         horizontalDescription: getStringValue(inmueble, 'TUNID'),
-        horizontalPrice: getNumberValue(inmueble, 'QIMPSOL'),
+        horizontalPrice: getNumberValue(inmueble, 'QIMPSOL') + garajesPrice + trasterossPrice,
         horizontalDescripcion: getStringValue(inmueble, 'DESREG'),
         horizontalRegistryVolume: getStringValue(inmueble, 'ITOMO'),
         horizontalRegistryBook: getStringValue(inmueble, 'ILIBRO'),
@@ -496,8 +498,8 @@ function getInmuebleHorizontal(inmuebles: Array<ItemUnidades>) {
 function getCheckAnejos(inmueble: ItemUnidades, itemUnidades: Array<ItemUnidades>) {
     // Check if a inmueble Vivienda type has another inmueble as annex
     return {
-        addParking: inmueble.CCLUSO === '01' ? itemUnidades.some(x => x.CUNID === inmueble.CUDVINC && x.CCLUSO === '02') : false,
-        addTrastero: inmueble.CCLUSO === '01' ? itemUnidades.some(x => x.CUNID === inmueble.CUDVINC && x.CCLUSO === '03') : false
+        addParking: inmueble.CCLUSO === '01' ? itemUnidades.some(x => x.CUDVINC === inmueble.CUNID && x.CCLUSO === '02') : false,
+        addTrastero: inmueble.CCLUSO === '01' ? itemUnidades.some(x => x.CUDVINC === inmueble.CUNID && x.CCLUSO === '03') : false
     };
 }
 
