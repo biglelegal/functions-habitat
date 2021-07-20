@@ -466,9 +466,10 @@ function getViviendaHorizontal(inmuebles: Array<ItemUnidades>, OUTPUT: OUTPUT, a
         horizontalNumber: getStringValue(inmueble, 'CNUM'),
         horizontalSurface: Math.floor(getNumberValue(inmueble, 'QSUTIL') * 10) / 10,
         horizontalSurfaceComunes: Math.floor(getNumberValue(inmueble, 'QSCONS') * 10) / 10,
-        horizontalTerraza: getNumberValue(inmueble, 'QSTEPR') > 0 ? 'yes' : 'no',
-        horizontalTerrazaSurface: Math.floor(getNumberValue(inmueble, 'QSTEPR') * 10) / 10,
-        horizontalTerrazaSurfaceExterior: Math.floor(getNumberValue(inmueble, 'QSJAPR') * 10) / 10,
+        horizontalTerraza: getTerrazaSurface(inmueble) > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurface: Math.floor(getTerrazaSurface(inmueble) * 10) / 10,
+        usoPrivativo: getUsoPrivativoSurface(inmueble) > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurfaceExterior: Math.floor(getUsoPrivativoSurface(inmueble) * 10) / 10,
         horizontalBlock: getStringValue(inmueble, 'CBLOQ'),
         horizontalStair: getStringValue(inmueble, 'CESC'),
         horizontalPortal: getStringValue(inmueble, 'CPORT'),
@@ -493,9 +494,10 @@ function getGarajeInmuebleHorizontal(inmuebles: Array<ItemUnidades>, annexedTras
         horizontalNumber: getStringValue(inmueble, 'CNUM'),
         horizontalSurface: Math.floor(getNumberValue(inmueble, 'QSUTIL') * 10) / 10,
         horizontalSurfaceComunes: Math.floor(getNumberValue(inmueble, 'QSCONS') * 10) / 10,
-        horizontalTerraza: getNumberValue(inmueble, 'QSTEPR') > 0 ? 'yes' : 'no',
-        horizontalTerrazaSurface: Math.floor(getNumberValue(inmueble, 'QSTEPR') * 10) / 10,
-        horizontalTerrazaSurfaceExterior: Math.floor(getNumberValue(inmueble, 'QSJAPR') * 10) / 10,
+        horizontalTerraza: getTerrazaSurface(inmueble) > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurface: Math.floor(getTerrazaSurface(inmueble) * 10) / 10,
+        usoPrivativo: getUsoPrivativoSurface(inmueble) > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurfaceExterior: Math.floor(getUsoPrivativoSurface(inmueble) * 10) / 10,
         horizontalBlock: getStringValue(inmueble, 'CBLOQ'),
         horizontalStair: getStringValue(inmueble, 'CESC'),
         horizontalPortal: getStringValue(inmueble, 'CPORT'),
@@ -518,15 +520,24 @@ function getInmuebleHorizontal(inmuebles: Array<ItemUnidades>) {
         horizontalNumber: getStringValue(inmueble, 'CNUM'),
         horizontalSurface: Math.floor(getNumberValue(inmueble, 'QSUTIL') * 10) / 10,
         horizontalSurfaceComunes: Math.floor(getNumberValue(inmueble, 'QSCONS') * 10) / 10,
-        horizontalTerraza: getNumberValue(inmueble, 'QSTEPR') > 0 ? 'yes' : 'no',
-        horizontalTerrazaSurface: Math.floor(getNumberValue(inmueble, 'QSTEPR') * 10) / 10,
-        horizontalTerrazaSurfaceExterior: Math.floor(getNumberValue(inmueble, 'QSJAPR') * 10) / 10,
+        horizontalTerraza: getTerrazaSurface(inmueble) > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurface: Math.floor(getTerrazaSurface(inmueble) * 10) / 10,
+        usoPrivativo: getUsoPrivativoSurface(inmueble) > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurfaceExterior: Math.floor(getUsoPrivativoSurface(inmueble) * 10) / 10,
         horizontalBlock: getStringValue(inmueble, 'CBLOQ'),
         horizontalStair: getStringValue(inmueble, 'CESC'),
         horizontalPortal: getStringValue(inmueble, 'CPORT'),
         horizontalFloor: getStringValue(inmueble, 'CPLANT'),
         horizontalDoor: getStringValue(inmueble, 'CNUM')
     }));
+}
+
+function getTerrazaSurface(inmueble: ItemUnidades) {
+    return getNumberValue(inmueble, 'QSTEPR') + getNumberValue(inmueble, 'QSJAPR');
+}
+
+function getUsoPrivativoSurface(inmueble: ItemUnidades) {
+    return getNumberValue(inmueble, 'QSUTERRAZACONT') + getNumberValue(inmueble, 'QSUPARCELACONT') + getNumberValue(inmueble, 'QSUPATIOCONT');
 }
 
 function getCheckViviendaAnejos(inmueble: ItemUnidades, itemUnidades: Array<ItemUnidades>) {
@@ -940,6 +951,9 @@ export interface ItemUnidades {
     QSCONS?: string;
     QSTEPR?: string;
     QSJAPR?: string;
+    QSUTERRAZACONT?: string;
+    QSUPARCELACONT?: string;
+    QSUPATIOCONT?: string;
     CUDVINC?: unknown;
     IFINCA?: unknown;
     ITOMO?: string;
