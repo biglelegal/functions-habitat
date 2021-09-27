@@ -300,15 +300,44 @@ function getPromocion(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
         promocionAndalucia: ['IP4061', 'IP4062'].includes(provincia) ? 'yes' : 'no',
         promocionCatalunya: ['IP4040'].includes(provincia) ? 'yes' : 'no',
         promocionLevante: ['IP4050'].includes(provincia) ? 'yes' : 'no',
-        promocionNumberViviendas: promotion.faseada ? promotion.promocionNumberViviendas : getNumberValue(OUTPUT.DATOSPRO, 'NUMVIV'),
-        promocionNumberPlazas: promotion.faseada ? promotion.promocionNumberPlazas : getNumberValue(OUTPUT.DATOSPRO, 'NUMGAR'),
-        promocionNumberLocales: promotion.faseada ? promotion.promocionNumberLocales : getNumberValue(OUTPUT.DATOSPRO, 'NUMLOC'),
-        promocionNumberTrasteros: promotion.faseada ? promotion.promocionNumberTrasteros : getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
-        promocionNumberBicicletas: promotion.faseada ? promotion.promocionNumberBicicletas : getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
         promocionDateLicencia: formatDate(fechas20, 'FREAL'),
         promocionAyuntamientoLicencia: getStringValue(ayuntamientoItem, 'ORT01'),
-        promocionNumberExpediente: promotion.faseada ? promotion.promocionNumberExpediente : getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
+        ...getPromotionInfo(OUTPUT, promotion),
     };
+}
+
+function getPromotionInfo(OUTPUT: OUTPUT, promotion: PromotionHabitat): Record<string, number | string> {
+    const numberExpediente: string = getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
+    if (!promotion.faseada) {
+        return {
+            promocionNumberViviendas: getNumberValue(OUTPUT.DATOSPRO, 'NUMVIV'),
+            promocionNumberPlazas: getNumberValue(OUTPUT.DATOSPRO, 'NUMGAR'),
+            promocionNumberLocales: getNumberValue(OUTPUT.DATOSPRO, 'NUMLOC'),
+            promocionNumberTrasteros: getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
+            promocionNumberBicicletas: getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
+            promocionNumberExpediente: numberExpediente
+        }
+    }
+
+    if (promotion.promocionNumberExpediente === numberExpediente) {
+        return {
+            promocionNumberViviendas: getNumberValue(OUTPUT.DATOSPRO, 'NUMVIV'),
+            promocionNumberPlazas: getNumberValue(OUTPUT.DATOSPRO, 'NUMGAR'),
+            promocionNumberLocales: getNumberValue(OUTPUT.DATOSPRO, 'NUMLOC'),
+            promocionNumberTrasteros: getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
+            promocionNumberBicicletas: getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
+            promocionNumberExpediente: numberExpediente
+        }
+    }
+
+    return {
+        promocionNumberViviendas: promotion.promocionNumberViviendas,
+        promocionNumberPlazas: promotion.promocionNumberPlazas,
+        promocionNumberLocales: promotion.promocionNumberLocales,
+        promocionNumberTrasteros: promotion.promocionNumberTrasteros,
+        promocionNumberBicicletas: promotion.promocionNumberBicicletas,
+        promocionNumberExpediente: promotion.promocionNumberExpediente
+    }
 }
 
 function getArquitectos(OUTPUT: OUTPUT) {
