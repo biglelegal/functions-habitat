@@ -3,6 +3,7 @@ export class PromotionHabitat {
     uid: string = '';
     active: boolean = false;
     activeForFinancial: boolean = false;
+    shareLicenciaObras: boolean = false;
     faseada: boolean = false;
     nombrePromocion: string = '';
     codigoPromocion: string = '';

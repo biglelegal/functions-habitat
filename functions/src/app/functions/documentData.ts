@@ -307,7 +307,6 @@ function getPromocion(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
 }
 
 function getPromotionInfo(OUTPUT: OUTPUT, promotion: PromotionHabitat): Record<string, number | string> {
-    const numberExpediente: string = getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
     if (!promotion.faseada) {
         return {
             promocionNumberViviendas: getNumberValue(OUTPUT.DATOSPRO, 'NUMVIV'),
@@ -315,18 +314,18 @@ function getPromotionInfo(OUTPUT: OUTPUT, promotion: PromotionHabitat): Record<s
             promocionNumberLocales: getNumberValue(OUTPUT.DATOSPRO, 'NUMLOC'),
             promocionNumberTrasteros: getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
             promocionNumberBicicletas: getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
-            promocionNumberExpediente: numberExpediente
+            promocionNumberExpediente: getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
         }
     }
 
-    if (promotion.promocionNumberExpediente === numberExpediente) {
+    if (promotion.shareLicenciaObras) {
         return {
             promocionNumberViviendas: getNumberValue(OUTPUT.DATOSPRO, 'NUMVIV'),
             promocionNumberPlazas: getNumberValue(OUTPUT.DATOSPRO, 'NUMGAR'),
             promocionNumberLocales: getNumberValue(OUTPUT.DATOSPRO, 'NUMLOC'),
             promocionNumberTrasteros: getNumberValue(OUTPUT.DATOSPRO, 'NUMTRAS'),
             promocionNumberBicicletas: getNumberValue(OUTPUT.DATOSPRO, 'NUMBICI'),
-            promocionNumberExpediente: numberExpediente
+            promocionNumberExpediente: getStringValue(OUTPUT.DATOSPRO, 'CLICEN')
         }
     }
 
