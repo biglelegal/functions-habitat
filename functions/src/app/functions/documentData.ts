@@ -295,7 +295,7 @@ function getNotarioipoteca(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
 function getPromocion(OUTPUT: OUTPUT, promotion: PromotionHabitat): any {
     const fechas20 = getCCLFecha(OUTPUT, '20');
     const provincia = getStringValue(OUTPUT.DATOSPRO, 'CDELEG');
-    const ayuntamientoItem = getRoleType(OUTPUT, 'ZUI1')
+    const ayuntamientoItem = getRoleType(OUTPUT, 'ZUI1');
     return {
         promocionAndalucia: ['IP4061', 'IP4062'].includes(provincia) ? 'yes' : 'no',
         promocionCatalunya: ['IP4040'].includes(provincia) ? 'yes' : 'no',
