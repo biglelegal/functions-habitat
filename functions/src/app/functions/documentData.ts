@@ -398,26 +398,20 @@ function getDivisionHorizontal(OUTPUT: OUTPUT, promotionFaseada: boolean): any {
             activoParking: !!garajes.length || !!motos.length || !!bicicletas.length,
             activoTrastero: !!trasteros.length,
         },
-        casa: getViviendaHorizontal(viviendas, OUTPUT, annexedGarajes, annexedTrasteros),
+        casa: getViviendaHorizontal(viviendas, OUTPUT, annexedGarajes, annexedTrasteros, numeroRegistro, lugarRegistro, promotionFaseada),
         chequePlaza: {
             plazaBicicleta: !!bicicletas.length,
             plazaMotocicleta: !!motos.length,
             plazaNormal: !!garajes.length,
         },
-        bici: getInmuebleHorizontal(bicicletas),
-        moto: getInmuebleHorizontal(motos),
-        car: getGarajeInmuebleHorizontal(garajes, annexedTrasterosToGarajes),
-        traster: getInmuebleHorizontal(trasteros),
-        house: getViviendaHorizontal(viviendas, OUTPUT, annexedGarajes, annexedTrasteros),
-        regis: promotionFaseada ? [] : getInmuebleHorizontalDatosRegistrales(viviendas, numeroRegistro, lugarRegistro),
-        parqueo: getInmuebleHorizontal(garajes),
-        park: getGarajeInmuebleHorizontal(garajes, annexedTrasterosToGarajes),
-        regi: promotionFaseada ? [] : getInmuebleHorizontalDatosRegistrales(garajes, numeroRegistro, lugarRegistro),
-        tras: getInmuebleHorizontal(trasteros),
-        reg: promotionFaseada ? [] : getInmuebleHorizontalDatosRegistrales(trasteros, numeroRegistro, lugarRegistro),
-        registrales: promotionFaseada ? '' : 'si',
-        registral: promotionFaseada ? '' : 'si',
-        registra: promotionFaseada ? '' : 'si'
+        bici: getInmuebleHorizontalWithRegistralData(bicicletas, numeroRegistro, lugarRegistro, promotionFaseada),
+        moto: getInmuebleHorizontalWithRegistralData(motos, numeroRegistro, lugarRegistro, promotionFaseada),
+        car: getGarajeInmuebleHorizontal(garajes, annexedTrasterosToGarajes, numeroRegistro, lugarRegistro, promotionFaseada),
+        traster: getInmuebleHorizontalWithRegistralData(trasteros, numeroRegistro, lugarRegistro, promotionFaseada),
+        house: getViviendaHorizontal(viviendas, OUTPUT, annexedGarajes, annexedTrasteros, numeroRegistro, lugarRegistro, promotionFaseada),
+        parqueo: getInmuebleHorizontalWithRegistralData(garajes, numeroRegistro, lugarRegistro, promotionFaseada),
+        park: getGarajeInmuebleHorizontal(garajes, annexedTrasterosToGarajes, numeroRegistro, lugarRegistro, promotionFaseada),
+        tras: getInmuebleHorizontalWithRegistralData(trasteros, numeroRegistro, lugarRegistro, promotionFaseada)
     };
 }
 
@@ -480,7 +474,7 @@ function getDatosPago(OUTPUT: OUTPUT): any {
     };
 }
 
-function getViviendaHorizontal(inmuebles: Array<ItemUnidades>, OUTPUT: OUTPUT, annexedGarajes: Array<ItemUnidades>, annexedTrasteros: Array<ItemUnidades>) {
+function getViviendaHorizontal(inmuebles: Array<ItemUnidades>, OUTPUT: OUTPUT, annexedGarajes: Array<ItemUnidades>, annexedTrasteros: Array<ItemUnidades>, numeroRegistro: number, lugarRegistro: string, promotionFaseada: boolean) {
     const garajesPrice: number = annexedGarajes.reduce((prev, curr) => prev + getNumberValue(curr, 'QIMPSOL'), 0);
     const trasterossPrice: number = annexedTrasteros.reduce((prev, curr) => prev + getNumberValue(curr, 'QIMPSOL'), 0);
     return inmuebles.map(inmueble => ({
@@ -506,10 +500,12 @@ function getViviendaHorizontal(inmuebles: Array<ItemUnidades>, OUTPUT: OUTPUT, a
         checkAnejos: getCheckViviendaAnejos(inmueble, getUnidades(OUTPUT)),
         anejoParking: getInmuebleHorizontal(annexedGarajes),
         anejoTrastero: getInmuebleHorizontal(annexedTrasteros),
+        registrales: promotionFaseada ? '' : 'si',
+        ...getInmuebleHorizontalDatosRegistrales(inmueble, numeroRegistro, lugarRegistro)
     }));
 }
 
-function getGarajeInmuebleHorizontal(inmuebles: Array<ItemUnidades>, annexedTrasteros: Array<ItemUnidades>) {
+function getGarajeInmuebleHorizontal(inmuebles: Array<ItemUnidades>, annexedTrasteros: Array<ItemUnidades>, numeroRegistro: number, lugarRegistro: string, promotionFaseada: boolean) {
     const trasterosPrice: number = annexedTrasteros.reduce((prev, curr) => prev + getNumberValue(curr, 'QIMPSOL'), 0);
     return inmuebles.map(inmueble => ({
         horizontalDescription: getStringValue(inmueble, 'TUNID'),
@@ -532,7 +528,11 @@ function getGarajeInmuebleHorizontal(inmuebles: Array<ItemUnidades>, annexedTras
         horizontalFloor: getStringValue(inmueble, 'CPLANT'),
         horizontalDoor: getStringValue(inmueble, 'CNUM'),
         esAnejoCheck: annexedTrasteros.some(x => x.CUDVINC === inmueble.CUNID) ? { trasteroAnejo: !!annexedTrasteros } : {},
-        datosTrastero: annexedTrasteros.some(x => x.CUDVINC === inmueble.CUNID) ? getInmuebleHorizontal(annexedTrasteros) : {}
+        datosTrastero: annexedTrasteros.some(x => x.CUDVINC === inmueble.CUNID) ? getInmuebleHorizontal(annexedTrasteros) : {},
+        registrales: promotionFaseada ? '' : 'si',
+        registral: promotionFaseada ? '' : 'si',
+        registra: promotionFaseada ? '' : 'si',
+        ...getInmuebleHorizontalDatosRegistrales(inmueble, numeroRegistro, lugarRegistro)
     }));
 }
 
@@ -560,6 +560,34 @@ function getInmuebleHorizontal(inmuebles: Array<ItemUnidades>) {
     }));
 }
 
+function getInmuebleHorizontalWithRegistralData(inmuebles: Array<ItemUnidades>, numeroRegistro: number, lugarRegistro: string, promotionFaseada: boolean) {
+    return inmuebles.map(inmueble => ({
+        horizontalDescription: getStringValue(inmueble, 'TUNID'),
+        horizontalPrice: getNumberValue(inmueble, 'QIMPSOL'),
+        horizontalDescripcion: getStringValue(inmueble, 'DESREG'),
+        horizontalRegistryVolume: getStringValue(inmueble, 'ITOMO'),
+        horizontalRegistryBook: getStringValue(inmueble, 'ILIBRO'),
+        horizontalRegistryPage: getStringValue(inmueble, 'IFOLIO'),
+        horizontalRegistryInscription: getStringValue(inmueble, 'IINSC'),
+        horizontalNumber: getStringValue(inmueble, 'CNUM'),
+        horizontalSurface: Math.floor(getNumberValue(inmueble, 'QSUTIL') * 10) / 10,
+        horizontalSurfaceComunes: Math.floor(getNumberValue(inmueble, 'QSCONS') * 10) / 10,
+        horizontalTerraza: getTerrazaSurface(inmueble) > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurface: Math.floor(getTerrazaSurface(inmueble) * 10) / 10,
+        usoPrivativo: getUsoPrivativoSurface(inmueble) > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurfaceExterior: Math.floor(getUsoPrivativoSurface(inmueble) * 10) / 10,
+        horizontalBlock: getStringValue(inmueble, 'CBLOQ'),
+        horizontalStair: getStringValue(inmueble, 'CESC'),
+        horizontalPortal: getStringValue(inmueble, 'CPORT'),
+        horizontalFloor: getStringValue(inmueble, 'CPLANT'),
+        horizontalDoor: getStringValue(inmueble, 'CNUM'),
+        registrales: promotionFaseada ? '' : 'si',
+        registral: promotionFaseada ? '' : 'si',
+        registra: promotionFaseada ? '' : 'si',
+        ...getInmuebleHorizontalDatosRegistrales(inmueble, numeroRegistro, lugarRegistro)
+    }));
+}
+
 function getTerrazaSurface(inmueble: ItemUnidades) {
     return getNumberValue(inmueble, 'QSTEPR') + getNumberValue(inmueble, 'QSJAPR');
 }
@@ -576,13 +604,14 @@ function getCheckViviendaAnejos(inmueble: ItemUnidades, itemUnidades: Array<Item
     };
 }
 
-function getInmuebleHorizontalDatosRegistrales(inmuebles: Array<ItemUnidades>, numeroRegistro: number, lugarRegistro: string) {
-    return inmuebles.map(inmueble => ({
+function getInmuebleHorizontalDatosRegistrales(inmueble: ItemUnidades, numeroRegistro: number, lugarRegistro: string) {
+    return ({
+        ...inmueble,
         horizontalRegistryCity: lugarRegistro,
         horizontalRegistryNumber: numeroRegistro,
         horizontalRegistryPropertyNumber: getNumberValue(inmueble, 'IFINCA'),
         cuotaVivienda: getNumberValue(inmueble, 'PCOGEN'),
-    }));
+    });
 }
 
 
