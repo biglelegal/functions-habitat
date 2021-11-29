@@ -501,7 +501,7 @@ function getViviendaHorizontal(inmuebles: Array<ItemUnidades>, OUTPUT: OUTPUT, a
         anejoParking: getInmuebleHorizontal(annexedGarajes),
         anejoTrastero: getInmuebleHorizontal(annexedTrasteros),
         registrales: promotionFaseada ? '' : 'si',
-        ...getInmuebleHorizontalDatosRegistrales(inmueble, numeroRegistro, lugarRegistro)
+        ...getInmuebleHorizontalDatosRegistrales(inmueble, numeroRegistro, lugarRegistro, promotionFaseada)
     }));
 }
 
@@ -532,7 +532,7 @@ function getGarajeInmuebleHorizontal(inmuebles: Array<ItemUnidades>, annexedTras
         registrales: promotionFaseada ? '' : 'si',
         registral: promotionFaseada ? '' : 'si',
         registra: promotionFaseada ? '' : 'si',
-        ...getInmuebleHorizontalDatosRegistrales(inmueble, numeroRegistro, lugarRegistro)
+        ...getInmuebleHorizontalDatosRegistrales(inmueble, numeroRegistro, lugarRegistro, promotionFaseada)
     }));
 }
 
@@ -584,7 +584,7 @@ function getInmuebleHorizontalWithRegistralData(inmuebles: Array<ItemUnidades>, 
         registrales: promotionFaseada ? '' : 'si',
         registral: promotionFaseada ? '' : 'si',
         registra: promotionFaseada ? '' : 'si',
-        ...getInmuebleHorizontalDatosRegistrales(inmueble, numeroRegistro, lugarRegistro)
+        ...getInmuebleHorizontalDatosRegistrales(inmueble, numeroRegistro, lugarRegistro, promotionFaseada)
     }));
 }
 
@@ -604,7 +604,10 @@ function getCheckViviendaAnejos(inmueble: ItemUnidades, itemUnidades: Array<Item
     };
 }
 
-function getInmuebleHorizontalDatosRegistrales(inmueble: ItemUnidades, numeroRegistro: number, lugarRegistro: string) {
+function getInmuebleHorizontalDatosRegistrales(inmueble: ItemUnidades, numeroRegistro: number, lugarRegistro: string, promotionFaseada: boolean) {
+    if (promotionFaseada) {
+        return {};
+    }
     return ({
         ...inmueble,
         horizontalRegistryCity: lugarRegistro,
