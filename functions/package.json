@@ -23,6 +23,7 @@
     "rxjs": "6.6.3",
     "soap": "0.36.0",
     "unirest": "0.6.0",
+    "public-ip": "4.0.4"
   },
   "devDependencies": {
     "@types/cors": "2.8.8",
