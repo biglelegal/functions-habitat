@@ -1,8 +1,7 @@
 import * as functions from 'firebase-functions';
 import { Request } from 'firebase-functions';
 import { chain as _chain } from 'lodash';
-import { CancelablePromise, v4 } from 'public-ip';
-import { combineLatest, from, Observable, of, throwError } from 'rxjs';
+import { combineLatest, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { PromotionHabitat } from '../entities';
 import { LogInfo } from '../entities/logInfo';
@@ -26,12 +25,8 @@ const getMainDocumentDataService = (request, response, next): Promise<any> => {
         return response.status(500).json(errorResponse(logInfo, errorValidation));
     }
     logIncomingIp(request);
-    return logOutcomingIP(v4({ onlyHttps: true }), 'v4')
-        .pipe(
-            switchMap(
-                () => getDocumentData(logInfo, crm, requestParams)
-            )
-        ).toPromise()
+    return getDocumentData(logInfo, crm, requestParams)
+        .toPromise()
         .then(
             data => {
                 logMessage(logInfo, 'end integrateCRM');
@@ -878,21 +873,6 @@ function logIncomingIp(request: Request): void {
     console.log('Request from', 'remoteAddress', remoteAddress, 'x-forwarded-for', forwardedFor, 'clientIp', clientIp);
 }
 
-function logOutcomingIP(ipCheck: CancelablePromise<string>, ipType: 'v4'): Observable<void> {
-    return from(ipCheck)
-        .pipe(
-            tap(
-                ip => console.log(`logOutcomingIP ${ipType}`, ip)
-            ),
-            catchError(
-                error => {
-                    console.error(`Error logOutcomingIP ${ipType}`, error);
-                    // Failling to get the IP should not block the execution
-                    return of(undefined);
-                }
-            )
-        );
-}
 app.use(cors);
 app.use(getMainDocumentDataService);
 export const getMainDocumentData = functions
