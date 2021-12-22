@@ -1,6 +1,8 @@
 import * as functions from 'firebase-functions';
+import { Request } from 'firebase-functions';
 import { chain as _chain } from 'lodash';
-import { combineLatest, Observable, of, throwError } from 'rxjs';
+import { CancelablePromise, v4 } from 'public-ip';
+import { combineLatest, from, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { PromotionHabitat } from '../entities';
 import { LogInfo } from '../entities/logInfo';
@@ -16,7 +18,6 @@ const app = express();
 const getMainDocumentDataService = (request, response, next): Promise<any> => {
     const logInfo: LogInfo = new LogInfo('integrateCRM', getUniqueId());
     logMessage(logInfo, 'init integrateCRM');
-
     const crm: string = request.body.crm;
     const requestParams: { codigoReserva: string, uid: string } = request.body.params;
 
@@ -24,9 +25,13 @@ const getMainDocumentDataService = (request, response, next): Promise<any> => {
     if (errorValidation) {
         return response.status(500).json(errorResponse(logInfo, errorValidation));
     }
-
-    return getDocumentData(logInfo, crm, requestParams)
-        .toPromise()
+    logIncomingIp(request);
+    return logOutcomingIP(v4({ onlyHttps: true }), 'v4')
+        .pipe(
+            switchMap(
+                () => getDocumentData(logInfo, crm, requestParams)
+            )
+        ).toPromise()
         .then(
             data => {
                 logMessage(logInfo, 'end integrateCRM');
@@ -41,7 +46,7 @@ const getMainDocumentDataService = (request, response, next): Promise<any> => {
                     response.status(500).json(errorResponse(logInfo, 'Error integrateCRM', err));
                 }
             }
-        );
+        )
 };
 
 function validateRequest(crm: string, requestParams: { codigoReserva: string, uid: string }, logInfo: LogInfo): string {
@@ -866,6 +871,28 @@ function getHorizontal(escriturasPublicas: string) {
     return 'no';
 }
 
+function logIncomingIp(request: Request): void {
+    const remoteAddress: string = request.socket?.remoteAddress || 'No remot address';
+    const forwardedFor: string | Array<string> = request.headers['x-forwarded-for'] || 'No x-forwarded-for header';
+    const clientIp: string | Array<string> = request.headers['fastly-client-ip'] || 'No fastly-client-ip header';
+    console.log('Request from', 'remoteAddress', remoteAddress, 'x-forwarded-for', forwardedFor, 'clientIp', clientIp);
+}
+
+function logOutcomingIP(ipCheck: CancelablePromise<string>, ipType: 'v4'): Observable<void> {
+    return from(ipCheck)
+        .pipe(
+            tap(
+                ip => console.log(`logOutcomingIP ${ipType}`, ip)
+            ),
+            catchError(
+                error => {
+                    console.error(`Error logOutcomingIP ${ipType}`, error);
+                    // Failling to get the IP should not block the execution
+                    return of(undefined);
+                }
+            )
+        );
+}
 app.use(cors);
 app.use(getMainDocumentDataService);
 export const getMainDocumentData = functions.region('europe-west1').https.onRequest(app);
