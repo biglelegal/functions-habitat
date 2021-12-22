@@ -895,7 +895,13 @@ function logOutcomingIP(ipCheck: CancelablePromise<string>, ipType: 'v4'): Obser
 }
 app.use(cors);
 app.use(getMainDocumentDataService);
-export const getMainDocumentData = functions.region('europe-west1').https.onRequest(app);
+export const getMainDocumentData = functions
+    .region('europe-west1')
+    .runWith({
+        vpcConnector: 'static-function-connector',
+        vpcConnectorEgressSettings: 'ALL_TRAFFIC'
+    })
+    .https.onRequest(app);
 
 
 
