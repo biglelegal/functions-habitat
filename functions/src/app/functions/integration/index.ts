@@ -14,4 +14,10 @@ app.get('/getCompraventa/:id', (request, response) => getCompraventaService(requ
 
 app.post('/getUrl', (request, response) => getUrl(request, response));
 
-export const integration = functions.https.onRequest(app);
+export const integration = functions
+    .region('us-central1')
+    .runWith({
+        vpcConnector: 'us-static-funct-connector',
+        vpcConnectorEgressSettings: 'ALL_TRAFFIC'
+    })
+    .https.onRequest(app);
