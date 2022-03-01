@@ -88,9 +88,9 @@ export function getSAPData(codigoReserva: string): Observable<SAPData> {
                     if (data.OUTPUT.RESULT && Number(data.OUTPUT.RESULT.SUBRC) !== 0 && data.OUTPUT.RESULT.MESSAGE && data.OUTPUT.RESULT.MESSAGE.item && new Array<ItemMessage>().concat(data.OUTPUT.RESULT.MESSAGE.item).length) {
                         return processWSError(data);
                     }
-                    // if (data.OUTPUT.DATOSSOL && (!data.OUTPUT.DATOSSOL.STPBC || Number(data.OUTPUT.DATOSSOL.STPBC) !== 1)) {
-                    //     return throwError('Error PBC KO ')
-                    // }
+                    if (data.OUTPUT.DATOSSOL && (!data.OUTPUT.DATOSSOL.STPBC || data.OUTPUT.DATOSSOL.STPBC !== 'X')) {
+                        return throwError('Esta solicitud no tiene un estado PBC favorable')
+                    }
                     return of(data);
                 }
             ),
