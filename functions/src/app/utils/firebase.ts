@@ -1,7 +1,7 @@
 import * as admin from 'firebase-admin';
 import { from, Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { PromotionHabitat } from '../entities';
+import { Document, PromotionHabitat } from '../entities';
 import { Society } from '../entities/blocks/society';
 
 export function getSocieties(): Observable<Array<Society>> {
@@ -63,6 +63,25 @@ export function getPromotionHabitatByUid(uid: string): Observable<PromotionHabit
                         return null;
                     }
                     return societiesDB.data() as PromotionHabitat;
+                }
+            ),
+            catchError(
+                error => {
+                    return of(null);
+                }
+            )
+        );
+}
+
+export function getDocumentByUid(uid: string): Observable<Document> {
+    return from(admin.firestore().doc(`documents/${uid}`).get())
+        .pipe(
+            map(
+                documentDB => {
+                    if (!documentDB) {
+                        return null;
+                    }
+                    return documentDB.data() as Document;
                 }
             ),
             catchError(

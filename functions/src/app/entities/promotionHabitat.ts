@@ -65,3 +65,39 @@ export class PromotionHabitat {
         return JSON.parse(JSON.stringify(item));
     }
 }
+
+export class Document {
+    main: any = {};
+    name: string = '';
+    creationTime: number = 0;
+    creationUserUid: string = '';
+    modificationTime: number = 0;
+    modificationUserUid: string = '';
+    typeUid: string = '';
+    userUid: string = '';
+    officeUid: string = '';
+    notified: boolean = false;
+    plataformCreated?: boolean = false;
+    active?: boolean = true;
+    deleted?: boolean = false;
+    archived?: boolean = false;
+    editing?: boolean = false;
+    percentageCompleted?: number = 0;
+    projectUid?: string = '';
+    vendor?: string = '';
+    uid: string = '';
+    signaturitProcessId?: string = '';
+    signaturitDocumentId?: string = '';
+    signed?: boolean = false;
+    category?: string = '';
+    type?: string = '';
+    percentage?: string = '';
+    logo?: string = '';
+    avatar?: string = '';
+    doctypeImg?: string = '';
+    stringyfied?: string = '';
+    userName?: string = '';
+    order?: number = 0;
+    statusName?: string = '';
+    metadata?: { [key: string]: string } = {};
+}
