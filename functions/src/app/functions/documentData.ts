@@ -192,7 +192,7 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
         compradorRegimen: getCivilStatus(cliente.PROPRTY_ST),
         compradorRegimenSoltero: getMaritalStatus(cliente.MARITAL_ST),
         compradorPercentage: (totalClients > 1) ? getNumberValue(cliente, 'PRELA') : 0,
-        compradorIdentificationType: Number(cliente.TYPE) === 2 ? 'NIE' : 'DNI',
+        compradorIdentificationType: validateNIE(getStringValue(cliente, 'SORT1')) ? 'NIE' : 'DNI',
         compradorIdentificationTypeJuridica: 'NIF',
         compradorIdentificationNumber: getStringValue(cliente, 'SORT1'),
         compradorPhoneNumber: getStringValue(cliente, 'TELF1'),
@@ -205,7 +205,7 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
         representado: [].concat(representantes.map(
             representante => ({
                 nombreRepreComprador: `${getStringValue(representante, 'NAME2')} ${getStringValue(representante, 'NAME1')}`,
-                tipoIdentificacionRepreComprador: Number(getStringValue(representante, 'TYPE')) === 2 ? 'NIE' : 'DNI',
+                tipoIdentificacionRepreComprador: validateNIE(getStringValue(representante, 'SORT1')) ? 'NIE' : 'DNI',
                 numeroIdentificacionRepreComprador: getStringValue(representante, 'SORT1'),
                 lugarNotariaRepreComprador: getStringValue(representante, 'CIUDAD'),
                 nombreNotarioRepreComprador: getStringValue(representante, 'NOTARIO'),
@@ -215,7 +215,7 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
         )),
         // REPRE Persona Juridica
         nombreRepreComprador: `${getStringValue(representantes[0], 'NAME2')} ${getStringValue(representantes[0], 'NAME1')}`,
-        tipoIdentificacionRepreComprador: Number(getStringValue(representantes[0], 'TYPE')) === 2 ? 'NIE' : 'DNI',
+        tipoIdentificacionRepreComprador: validateNIE(getStringValue(representantes[0], 'SORT1')) ? 'NIE' : 'DNI',
         numeroIdentificacionRepreComprador: getStringValue(representantes[0], 'SORT1'),
         lugarNotariaRepreComprador: getStringValue(representantes[0], 'CIUDAD'),
         nombreNotarioRepreComprador: getStringValue(representantes[0], 'NOTARIO'),
@@ -224,7 +224,7 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
         // Other repre Persona Jurídica
         compradorTypeRepresentativePower: representantes.length > 1 ? 'jointAgent' : '',
         nombreOtherRepreComprador: representantes.length > 1 ? `${getStringValue(representantes[1], 'NAME2')} ${getStringValue(representantes[1], 'NAME1')}` : '',
-        tipoIdentificacionOtherRepreComprador: Number(getStringValue(representantes[0], 'TYPE')) === 2 ? 'NIE' : 'DNI',
+        tipoIdentificacionOtherRepreComprador: validateNIE(getStringValue(representantes[0], 'SORT1')) ? 'NIE' : 'DNI',
         numeroIdentificacionOtherRepreComprador: representantes.length > 1 ? getStringValue(representantes[1], 'SORT1') : '',
         lugarNotariaOtherRepreComprador: representantes.length > 1 ? getStringValue(representantes[1], 'CIUDAD') : '',
         nombreNotarioOtherRepreComprador: representantes.length > 1 ? getStringValue(representantes[1], 'NOTARIO') : '',
@@ -243,12 +243,17 @@ function getComprador(cliente: ItemCliente, totalClients: number, representantes
     };
 }
 
+function validateNIE(value: string): boolean {
+    const niePattern: RegExp = /^[XYZxyz]{1}[\d]{7}[A-Za-z]{1}$/;
+    return niePattern.test(value);
+}
+
 function getConyuge(cliente: ItemCliente) {
     return {
         compradorGanacialesGender: cliente.SEX === '1' ? 'F' : 'M',
         compradorGanacialesName: getStringValue(cliente, 'NAME2'),
         compradorGanacialesLastName1: getStringValue(cliente, 'NAME1'),
-        compradorGanacialesIdentificationType: Number(getStringValue(cliente, 'TYPE')) === 2 ? 'NIE' : 'DNI',
+        compradorGanacialesIdentificationType: validateNIE(getStringValue(cliente, 'SORT1')) ? 'NIE' : 'DNI',
         compradorGanacialesIdentificationNumber: getStringValue(cliente, 'SORT1'),
         compradorGanacialesPhoneNumber: getStringValue(cliente, 'TELF1'),
         compradorGanacialesEmail: getStringValue(cliente, 'SMTP_ADDR')
