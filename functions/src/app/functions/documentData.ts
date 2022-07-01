@@ -249,7 +249,7 @@ function getIdentificationType(value: string): string {
         return 'NIE';
     }
     if (value.startsWith('M')) {
-        return 'NIF';
+        return 'NIF_E';
     }
     return 'DNI';
 }
