@@ -10,6 +10,7 @@ export class PromotionHabitat {
     sociedad: string = '';
     cuentaBancaria: string = '';
     entidadBancaria: string = '';
+    entidadBancaria2: string = '';
     contentCargas: string = '';
     inmueble: Array<{
         descripcionFinca: string,
