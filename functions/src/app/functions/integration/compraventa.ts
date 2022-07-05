@@ -7,7 +7,8 @@ import { PromotionHabitat } from '../../entities';
 import { LogInfo } from '../../entities/logInfo';
 import { getPromotionHabitatByCodPromo } from '../../utils/firebase';
 import { errorResponse, getUniqueId, logMessage } from '../../utils/utils';
-import { ItemMessage, SAPData } from '../documentData';
+import { SAPData } from '../compraventa';
+import { ItemMessage } from '../documentData';
 
 export const getCompraventaService = (request: Request, response: Response): Promise<any> => {
     const logInfo: LogInfo = new LogInfo('getCompraventaService', getUniqueId());
@@ -108,7 +109,7 @@ function processWSError(data: SAPData): Observable<SAPData> {
     return throwError(errorMessage);
 }
 
-export function getPromotionData(sapData: SAPData): Observable<Array<PromotionHabitat>> {
+function getPromotionData(sapData: SAPData): Observable<Array<PromotionHabitat>> {
     if (!sapData || !sapData.OUTPUT || !sapData.OUTPUT.DATOSPRO || !sapData.OUTPUT.DATOSPRO.CPROMO) {
         return throwError(`No existe código de promoción para esta reserva`);
     }
