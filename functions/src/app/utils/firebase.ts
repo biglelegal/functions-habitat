@@ -1,7 +1,7 @@
 import * as admin from 'firebase-admin';
-import { from, Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
-import { Document, PromotionHabitat } from '../entities';
+import { from, Observable, of, throwError } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
+import { Document, PromotionHabitat, User } from '../entities';
 import { Society } from '../entities/blocks/society';
 
 export function getSocieties(): Observable<Array<Society>> {
@@ -87,6 +87,40 @@ export function getDocumentByUid(uid: string): Observable<Document> {
             catchError(
                 error => {
                     return of(null);
+                }
+            )
+        );
+}
+
+export function setDocument(document: Document): Observable<Document> {
+    return from(admin.firestore().doc(`documents/${document.uid}`).set(Document.extract(document)))
+        .pipe(
+            catchError(
+                error => {
+                    return of(null);
+                }
+            )
+        );
+}
+
+export function getUserByEmail(email: string): Observable<User> {
+    return from(admin.firestore().collection(`users`).where('email', '==', email).get())
+        .pipe(
+            switchMap(
+                userDB => {
+                    if (!userDB) {
+                        return of(null);
+                    }
+                    const usersList: Array<User> = new Array<User>();
+                    userDB.forEach(
+                        user => {
+                            usersList.push(user.data() as User);
+                        }
+                    );
+                    if (!usersList || !usersList.length) {
+                        return throwError(`El usuario ${email} no existe`);
+                    }
+                    return of(usersList[0]);
                 }
             )
         );
