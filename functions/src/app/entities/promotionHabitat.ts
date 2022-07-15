@@ -101,4 +101,7 @@ export class Document {
     order?: number = 0;
     statusName?: string = '';
     metadata?: { [key: string]: string } = {};
+    static extract(item: Document): any {
+        return JSON.parse(JSON.stringify(item));
+    }
 }
