@@ -10,23 +10,23 @@ import { errorResponse, getUniqueId, logMessage } from '../../utils/utils';
 import { SAPData } from '../compraventa';
 import { ItemMessage } from '../documentData';
 
-export const getCompraventaService = (request: Request, response: Response): Promise<any> => {
-    const logInfo: LogInfo = new LogInfo('getCompraventaService', getUniqueId());
+export const getReservaService = (request: Request, response: Response): Promise<any> => {
+    const logInfo: LogInfo = new LogInfo('getReservaService', getUniqueId());
     logMessage(logInfo, '1. Init process');
-    return getCompraventaWSData(request.params.id).pipe(
+    return getReservaWSData(request.params.id).pipe(
     ).toPromise()
         .then(
             data => {
-                logMessage(logInfo, 'end getCompraventaService');
+                logMessage(logInfo, 'end getReservaService');
                 response.status(200).json(data);
             }
         ).catch(
             err => {
-                logMessage(logInfo, 'Error getCompraventaService', err);
+                logMessage(logInfo, 'Error getReservaService', err);
                 if (typeof err === 'string') {
-                    response.status(500).json(errorResponse(logInfo, err, 'Error getCompraventaService'));
+                    response.status(500).json(errorResponse(logInfo, err, 'Error getReservaService'));
                 } else {
-                    response.status(500).json(errorResponse(logInfo, 'Error getCompraventaService', err));
+                    response.status(500).json(errorResponse(logInfo, 'Error getReservaService', err));
                 }
             }
         );
@@ -34,11 +34,11 @@ export const getCompraventaService = (request: Request, response: Response): Pro
 
 
 
-export function getCompraventaWSData(codigoReserva: string): Observable<Array<{ codigoReserva: string } & PromotionHabitat>> {
-    return getSAPData(codigoReserva)
+export function getReservaWSData(codigoReserva: string): Observable<Array<{ codigoReserva: string } & PromotionHabitat>> {
+    return getReservaSAPData(codigoReserva)
         .pipe(
             switchMap(
-                sapData => getPromotionData(sapData)
+                sapData => getPromotionData(sapData) // See where is the promotion code
                     .pipe(
                         map(
                             promotions => promotions
@@ -65,7 +65,7 @@ export function getCompraventaWSData(codigoReserva: string): Observable<Array<{ 
         );
 }
 
-export function getSAPData(codigoReserva: string): Observable<SAPData> {
+export function getReservaSAPData(codigoReserva: string): Observable<SAPData> {
     const auth = `Basic ${Buffer.from('WS_BIGLE:BIGLESAP2021').toString('base64')}`;
     return from(soap.createClientAsync(environment.compraventa.url, { wsdl_headers: { Authorization: auth }, wsdl_options: { timeout: 15000 } }))
         .pipe(
@@ -81,17 +81,18 @@ export function getSAPData(codigoReserva: string): Observable<SAPData> {
             tap(
                 data => console.log('getWSData data', data)
             ),
-            switchMap(
-                data => {
-                    if (!data.OUTPUT) {
-                        return throwError('No OUTPUT found');
-                    }
-                    if (data.OUTPUT.RESULT && Number(data.OUTPUT.RESULT.SUBRC) !== 0 && data.OUTPUT.RESULT.MESSAGE && data.OUTPUT.RESULT.MESSAGE.item && new Array<ItemMessage>().concat(data.OUTPUT.RESULT.MESSAGE.item).length) {
-                        return processWSError(data);
-                    }
-                    return of(data);
-                }
-            ),
+            // Mirar van a enviar los errores para este nuevo endpoint
+            // switchMap(
+            //     data => {
+            //         if (!data.OUTPUT) {
+            //             return throwError('No OUTPUT found');
+            //         }
+            //         if (data.OUTPUT.RESULT && Number(data.OUTPUT.RESULT.SUBRC) !== 0 && data.OUTPUT.RESULT.MESSAGE && data.OUTPUT.RESULT.MESSAGE.item && new Array<ItemMessage>().concat(data.OUTPUT.RESULT.MESSAGE.item).length) {
+            //             return processWSError(data);
+            //         }
+            //         return of(data);
+            //     }
+            // ),
             catchError(
                 error => {
                     console.error('Error getWSData', error);
@@ -109,7 +110,7 @@ function processWSError(data: SAPData): Observable<SAPData> {
     return throwError(errorMessage);
 }
 
-function getPromotionData(sapData: SAPData): Observable<Array<PromotionHabitat>> {
+function getPromotionData(sapData: SAPData): Observable<Array<PromotionHabitat>> {// Check where is the promotion code in XML
     if (!sapData || !sapData.OUTPUT || !sapData.OUTPUT.DATOSPRO || !sapData.OUTPUT.DATOSPRO.CPROMO) {
         return throwError(`No existe código de promoción para esta reserva`);
     }

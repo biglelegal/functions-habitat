@@ -30,7 +30,7 @@ function validateRequest(axiosRequest: GetUrlRequest): Observable<string> {
     if (axiosRequest.type !== 'Legal' && axiosRequest.type !== 'Block') {
         return throwError('wrong_type');
     }
-    if (['societies', 'compraventa'].indexOf(axiosRequest.crmId) === -1) {
+    if (['societies', 'compraventa', 'reserva'].indexOf(axiosRequest.crmId) === -1) {
         return throwError('wrong_crmid');
     }
     return of(null);
@@ -43,9 +43,18 @@ function getUrlRersponse(axiosRequest: GetUrlRequest): Observable<GetUrlResponse
             axiosResponse.url = `${environment.integration.url}/${environment.integration.societies}`;
             axiosResponse.method = 'get';
             return of(axiosResponse);
-        default:
-            axiosResponse.url = `${environment.integration.url}/${environment.integration.compraventa}/${axiosRequest.params}`;
+        case 'Block':
             axiosResponse.method = 'get';
+            if (axiosRequest.crmId === 'compraventa') {
+                axiosResponse.url = `${environment.integration.url}/${environment.integration.compraventa}/${axiosRequest.params}`;
+            }
+            if (axiosRequest.crmId === 'reserva') {
+                axiosResponse.url = `${environment.integration.url}/${environment.integration.reserva}/${axiosRequest.params}`;
+            }
+            return of(axiosResponse);
+        default:
+            axiosResponse.method = 'get';
+            axiosResponse.url = `${environment.integration.url}/${environment.integration.compraventa}/${axiosRequest.params}`;
             return of(axiosResponse);
     }
 }
