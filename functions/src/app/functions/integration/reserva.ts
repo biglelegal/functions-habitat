@@ -3,30 +3,99 @@ import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import * as soap from 'soap';
 import { environment } from '../../../environments/environment';
-import { PromotionHabitat } from '../../entities';
+import { Document, PromotionHabitat } from '../../entities';
 import { LogInfo } from '../../entities/logInfo';
-import { getPromotionHabitatByCodPromo } from '../../utils/firebase';
+import { getPromotionHabitatByCodPromo, getUserByEmail, setDocument } from '../../utils/firebase';
 import { errorResponse, getUniqueId, logMessage } from '../../utils/utils';
 import { SAPData } from '../compraventa';
 import { ItemMessage } from '../documentData';
+import moment = require('moment');
 
-export const getReservaService = (request: Request, response: Response): Promise<any> => {
-    const logInfo: LogInfo = new LogInfo('getReservaService', getUniqueId());
-    logMessage(logInfo, '1. Init process');
-    return getReservaWSData(request.params.id).pipe(
+
+export const createReservaService = (request: Request, response: Response): Promise<any> => {
+    const requestId = getUniqueId();
+    const logInfo: LogInfo = new LogInfo('createReservaService', requestId);
+    logMessage(logInfo, '1. createReservaService Init process');
+    const authorization: string = request.headers.authorization as string;
+    const regex = /Bearer (.*)/;
+
+    const match = regex.exec(authorization);
+
+    if (match.length > 1 && match[1] !== environment.authorizationReserva) {
+        response.status(403).json(errorResponse(logInfo, 'Invalid Authorization'));
+    }
+
+    const codigoReserva: string = request.body.codigoReserva;
+    const userEmail: string = request.body.userEmail;
+
+
+    return createDocument(codigoReserva, userEmail, requestId).pipe(
     ).toPromise()
         .then(
             data => {
-                logMessage(logInfo, 'end getReservaService');
+                logMessage(logInfo, 'end createReservaService');
                 response.status(200).json(data);
             }
         ).catch(
             err => {
-                logMessage(logInfo, 'Error getReservaService', err);
+                logMessage(logInfo, 'Error createReservaService', err);
                 if (typeof err === 'string') {
-                    response.status(500).json(errorResponse(logInfo, err, 'Error getReservaService'));
+                    response.status(500).json(errorResponse(logInfo, err, 'Error createReservaService'));
                 } else {
-                    response.status(500).json(errorResponse(logInfo, 'Error getReservaService', err));
+                    response.status(500).json(errorResponse(logInfo, 'Error createReservaService', err));
+                }
+            }
+        );
+};
+
+function createDocument(codigoReserva: string, userEmail: string, requestId: string): Observable<{ creationTime: string, url: string, requestId: string }> {
+    return getUserByEmail(userEmail)
+        .pipe(
+            map(
+                user => ({
+                    ...new Document(),
+                    name: `Reserva - ${codigoReserva}`,
+                    typeUid: environment.reservaModelUid,
+                    uid: getUniqueId(),
+                    creationTime: new Date().getTime(),
+                    userUid: user.uid,
+                    creationUserUid: user.uid,
+                    officeUid: user.officeUid,
+                    main: { codigoReserva: codigoReserva }
+                })
+            ),
+            switchMap(
+                document => setDocument(document)
+                    .pipe(
+                        map(
+                            () => ({
+                                creationTime: moment(document.creationTime).toISOString(),
+                                url: `https://bigle-plataform-habitat.firebaseapp.com/Forms/Form/${document.uid}/1`,
+                                requestId: requestId
+                            })
+                        )
+                    )
+            )
+        )
+}
+
+export const fulfillReservaService = (request: Request, response: Response): Promise<any> => {
+    const logInfo: LogInfo = new LogInfo('fulfillReservaService', getUniqueId());
+    logMessage(logInfo, '1. Init process');
+    return getReservaWSData(request.params.documentUid).pipe(
+    ).toPromise()
+        .then(
+            data => {
+                logMessage(logInfo, 'end fulfillReservaService');
+                response.status(200).json(data);
+            }
+        ).catch(
+            err => {
+                logMessage(logInfo, 'Error fulfillReservaService', err);
+                if (typeof err === 'string') {
+                    response.status(500).json(errorResponse(logInfo, err, 'Error fulfillReservaService'));
+                } else {
+                    response.status(500).json(errorResponse(logInfo, 'Error fulfillReservaService', err));
                 }
             }
         );
@@ -143,3 +212,4 @@ function getPromotionData(sapData: SAPData): Observable<Array<PromotionHabitat>>
         )
 
 }
+
