@@ -19,10 +19,16 @@ export const environment = {
     // url: 'http://localhost:5000/bigle-plataform-habitat/us-central1/integration',
     url: 'https://us-central1-bigle-plataform-habitat.cloudfunctions.net/integration',
     societies: 'getSocieties',
-    compraventa: 'getCompraventa'
+    compraventa: 'getCompraventa',
+    reserva: 'getReserva'
   },
   compraventa: {
     // url: 'https://a0bdd893-b778-4cbe-a3b4-a31c51c934f1.mock.pstmn.io'
     url: 'https://ws.habitat.es:8200/sap/bc/srt/wsdl/flv_10002A111AD1/bndg_url/sap/bc/srt/rfc/sap/zhab_wscon_get_data_solicitud/100/zhab_wscon_get_data_solicitud/zhab_wscon_get_data_solicitud_binding?sap-client=100'
-  }
+  },
+  reserva: {
+    url: 'https://prod-251.westeurope.logic.azure.com/workflows/d40804a8d3454871a3a0a1bcb655ed0f/triggers/manual/paths/invoke?api-version=2016-06-01&sp=/triggers/manual/run&sv=1.0&sig=CRntvmbYsTqy0WbiOUlEf15QvMwp_FHhgcEud-ArM44'
+  },
+  reservaModelUid: '145b1def64603e',
+  authorizationReserva: 'EA0D1E03F6BA6370A6B7DDFABA145F80B8F49273F8FC2C8708EF87D9536A4679'
 };
