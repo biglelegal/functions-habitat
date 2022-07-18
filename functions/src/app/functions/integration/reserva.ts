@@ -1,16 +1,17 @@
+import axios, { AxiosResponse } from 'axios';
 import { Request, Response } from 'express';
 import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
-import * as soap from 'soap';
+import * as xml2js from "xml2js";
 import { environment } from '../../../environments/environment';
 import { Document, PromotionHabitat } from '../../entities';
 import { LogInfo } from '../../entities/logInfo';
 import { getPromotionHabitatByCodPromo, getUserByEmail, setDocument } from '../../utils/firebase';
 import { errorResponse, getUniqueId, logMessage } from '../../utils/utils';
-import { SAPData } from '../compraventa';
 import { ItemMessage } from '../documentData';
+import { ReservaData } from '../reserva';
 import moment = require('moment');
-
+const parser = new xml2js.Parser({ attrkey: "ATTR" });
 
 export const createReservaService = (request: Request, response: Response): Promise<any> => {
     const requestId = getUniqueId();
@@ -79,23 +80,23 @@ function createDocument(codigoReserva: string, userEmail: string, requestId: str
         )
 }
 
-export const fulfillReservaService = (request: Request, response: Response): Promise<any> => {
-    const logInfo: LogInfo = new LogInfo('fulfillReservaService', getUniqueId());
+export const getReservaService = (request: Request, response: Response): Promise<any> => {
+    const logInfo: LogInfo = new LogInfo('getReservaService', getUniqueId());
     logMessage(logInfo, '1. Init process');
-    return getReservaWSData(request.params.documentUid).pipe(
+    return getReservaWSData(request.params.uid).pipe(
     ).toPromise()
         .then(
             data => {
-                logMessage(logInfo, 'end fulfillReservaService');
+                logMessage(logInfo, 'end getReservaService');
                 response.status(200).json(data);
             }
         ).catch(
             err => {
-                logMessage(logInfo, 'Error fulfillReservaService', err);
+                logMessage(logInfo, 'Error getReservaService', err);
                 if (typeof err === 'string') {
-                    response.status(500).json(errorResponse(logInfo, err, 'Error fulfillReservaService'));
+                    response.status(500).json(errorResponse(logInfo, err, 'Error getReservaService'));
                 } else {
-                    response.status(500).json(errorResponse(logInfo, 'Error fulfillReservaService', err));
+                    response.status(500).json(errorResponse(logInfo, 'Error getReservaService', err));
                 }
             }
         );
@@ -107,7 +108,7 @@ export function getReservaWSData(codigoReserva: string): Observable<Array<{ codi
     return getReservaSAPData(codigoReserva)
         .pipe(
             switchMap(
-                sapData => getPromotionData(sapData) // See where is the promotion code
+                sapData => getPromotionData(sapData)
                     .pipe(
                         map(
                             promotions => promotions
@@ -127,28 +128,22 @@ export function getReservaWSData(codigoReserva: string): Observable<Array<{ codi
             ),
             catchError(
                 error => {
-                    console.error('Error getData', error);
+                    console.error('Error getReservaWSData', error);
                     return throwError(error);
                 }
             )
         );
 }
 
-export function getReservaSAPData(codigoReserva: string): Observable<SAPData> {
-    const auth = `Basic ${Buffer.from('WS_BIGLE:BIGLESAP2021').toString('base64')}`;
-    return from(soap.createClientAsync(environment.compraventa.url, { wsdl_headers: { Authorization: auth }, wsdl_options: { timeout: 15000 } }))
+export function getReservaSAPData(codigoReserva: string): Observable<ReservaData> {
+    // const auth = `Basic ${Buffer.from('WS_BIGLE:BIGLESAP2021').toString('base64')}`; as long as we use their PRE URL is not necessary
+    return from(callReservaWebService(codigoReserva))
         .pipe(
-            switchMap(
-                client => {
-                    client.setSecurity(new soap.BasicAuthSecurity('WS_BIGLE', 'BIGLESAP2021'));
-                    return from(client.ZCWS_WS_GET_DATA_SOLICITUDAsync({ INPUT: { ISOLIC: codigoReserva } }));
-                }
-            ),
             map(
-                result => result[0] as SAPData
+                result => parseData(result.data)
             ),
             tap(
-                data => console.log('getWSData data', data)
+                parsedData => console.log('getReservaSAPData parsedData', JSON.stringify(parsedData))
             ),
             // Mirar van a enviar los errores para este nuevo endpoint
             // switchMap(
@@ -164,26 +159,35 @@ export function getReservaSAPData(codigoReserva: string): Observable<SAPData> {
             // ),
             catchError(
                 error => {
-                    console.error('Error getWSData', error);
+                    console.error('Error getReservaSAPData', error);
                     return throwError(error);
                 }
             )
         )
 }
 
-function processWSError(data: SAPData): Observable<SAPData> {
-    const errorMessage = new Array<ItemMessage>().concat(data.OUTPUT.RESULT.MESSAGE.item)
+function parseData(data: any): ReservaData {
+    let parsedData: ReservaData = {};
+    parser.parseString(data, function (error, result) {
+        parsedData = result;
+    });
+    return parsedData
+}
+
+function processWSError(data: ReservaData): Observable<ReservaData> {
+    const errorMessage = new Array<ItemMessage>().concat(data.RESERVA.RESULT.MESSAGE.item)
         .map(
             item => item.MESSAGE
         ).join(', ');
     return throwError(errorMessage);
 }
 
-function getPromotionData(sapData: SAPData): Observable<Array<PromotionHabitat>> {// Check where is the promotion code in XML
-    if (!sapData || !sapData.OUTPUT || !sapData.OUTPUT.DATOSPRO || !sapData.OUTPUT.DATOSPRO.CPROMO) {
+function getPromotionData(reservaData: ReservaData): Observable<Array<PromotionHabitat>> {// Check where is the promotion code in XML
+    if (!reservaData || !reservaData.RESERVA || !reservaData.RESERVA.INPUT.CPROMO) {
         return throwError(`No existe código de promoción para esta reserva`);
     }
-    const codPromo: string = sapData.OUTPUT.DATOSPRO.CPROMO;
+
+    const codPromo: string = reservaData.RESERVA.INPUT.CPROMO;
     return getPromotionHabitatByCodPromo(codPromo)
         .pipe(
             switchMap(
@@ -211,5 +215,18 @@ function getPromotionData(sapData: SAPData): Observable<Array<PromotionHabitat>>
             )
         )
 
+}
+
+function callReservaWebService(codigoReserva): Promise<AxiosResponse<any, any>> {
+
+    const instance = axios.create({
+        timeout: 100000,
+        headers: { 'content-type': 'application/json' },
+        method: 'post',
+    });
+    const data: { 'Id Reserva': string } = {
+        'Id Reserva': codigoReserva
+    }
+    return instance.post(environment.reserva.url, data);
 }
 
