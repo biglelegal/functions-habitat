@@ -46,7 +46,7 @@ function validateRequest(crm: string, requestParams: { codigoReserva: string, ui
         logMessage(logInfo, 'Error', 'crm_not_found');
         return 'crm_not_found';
     }
-    if (!['compraventa'].includes(crm)) {
+    if (!['compraventa', 'reserva'].includes(crm)) {
         logMessage(logInfo, 'Error', 'wrong_crm');
         return 'wrong_crm';
     }
