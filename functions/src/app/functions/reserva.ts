@@ -4,26 +4,25 @@ import { PromotionHabitat } from '../entities';
 import { LogInfo } from '../entities/logInfo';
 import { getPromotionHabitatByUid } from '../utils/firebase';
 import { logMessage } from '../utils/utils';
-import { SAPData } from './compraventa';
 import { getReservaSAPData } from './integration/reserva';
 
-export function getReservaData(logInfo: LogInfo, codigoReserva: string, uid: string): Observable<any> {
+export function getReservaData(logInfo: LogInfo, codigoReserva: string, promotionUid: string): Observable<any> {
 
     const errorValidation = validateRequestReserva(codigoReserva, logInfo);
     if (errorValidation) {
         return throwError(errorValidation);
     }
-    return getReservaWSData(codigoReserva, uid)
+    return getReservaWSData(codigoReserva, promotionUid)
         .pipe(
             switchMap(
-                rawData => processSAPData(rawData, codigoReserva)
+                rawData => processReservaData(rawData)
             ),
             tap(
-                compraventa => console.log(JSON.stringify(compraventa))
+                reserva => console.log(JSON.stringify(reserva))
             ),
             catchError(
                 error => {
-                    logMessage(logInfo, 'Error getCompraventaData', error);
+                    logMessage(logInfo, 'Error getReservaData', error);
                     return throwError(error);
                 }
             )
@@ -38,35 +37,32 @@ function validateRequestReserva(codigoReserva: string, logInfo: LogInfo): string
     return null;
 }
 
-function getReservaWSData(codigoReserva: string, uid: string) {
+function getReservaWSData(codigoReserva: string, promotionUid: string): Observable<{ reservaData: ReservaData, promotion: PromotionHabitat }> {
     return combineLatest([
         getReservaSAPData(codigoReserva),
-        getPromotionHabitatByUid(uid)
+        getPromotionHabitatByUid(promotionUid)
     ])
         .pipe(
             map(
-                ([sapData, promotion]) => ({ sapData: sapData, promotion: promotion })
+                ([reservaData, promotion]) => ({ reservaData: reservaData, promotion: promotion })
             )
 
         );
 }
 
-function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat }, codigoReserva: string): Observable<unknown> {
-    // if (data.sapData.OUTPUT.DATOSSOL && (!data.sapData.OUTPUT.DATOSSOL.STPBC || Number(data.sapData.OUTPUT.DATOSSOL.STPBC) !== 1)) {
-    //     return throwError('Error PBC KO ')
-    // }
+function processReservaData(data: { reservaData: ReservaData, promotion: PromotionHabitat }): Observable<unknown> {
 
-    // if (data.promotion && !data.promotion.active && !data.promotion.activeForFinancial) {
-    //     return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Legal y por Dpto Financiero`);
-    // }
+    if (data.promotion && !data.promotion.active && !data.promotion.activeForFinancial) {
+        return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Legal y por Dpto Financiero`);
+    }
 
-    // if (data.promotion && !data.promotion.active) {
-    //     return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Legal`);
-    // }
+    if (data.promotion && !data.promotion.active) {
+        return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Legal`);
+    }
 
-    // if (data.promotion && !data.promotion.activeForFinancial) {
-    //     return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Financiero`);
-    // }
+    if (data.promotion && !data.promotion.activeForFinancial) {
+        return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Financiero`);
+    }
 
     // return of({
     //     comprador: getCompradores(data.sapData.OUTPUT),
@@ -85,4 +81,8 @@ function processSAPData(data: { sapData: SAPData, promotion: PromotionHabitat },
     //     codigoReserva: codigoReserva
     // });
     return of(undefined);
+}
+
+export interface ReservaData {
+    RESERVA?: any;
 }
