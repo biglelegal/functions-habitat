@@ -49,7 +49,7 @@ function getUrlRersponse(axiosRequest: GetUrlRequest): Observable<GetUrlResponse
                 axiosResponse.url = `${environment.integration.url}/${environment.integration.compraventa}/${axiosRequest.params}`;
             }
             if (axiosRequest.crmId === 'reserva') {
-                axiosResponse.url = `${environment.integration.url}/${environment.integration.reserva}/${axiosRequest.params}`;
+                axiosResponse.url = `${environment.integration.url}/${environment.integration.reserva}/${axiosRequest.params.join('/')}`;
             }
             return of(axiosResponse);
         default:

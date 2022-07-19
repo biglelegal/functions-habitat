@@ -1,14 +1,14 @@
 import axios, { AxiosResponse } from 'axios';
 import { Request, Response } from 'express';
 import { XMLParser } from 'fast-xml-parser';
-import { from, Observable, of, throwError } from 'rxjs';
+import { from, Observable, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { Document, PromotionHabitat } from '../../entities';
+import { Document } from '../../entities';
 import { LogInfo } from '../../entities/logInfo';
-import { getPromotionHabitatByCodPromo, getUserByEmail, setDocument } from '../../utils/firebase';
+import { getUserByEmail, setDocument } from '../../utils/firebase';
 import { errorResponse, getUniqueId, logMessage } from '../../utils/utils';
-import { INPUT, ReservaData } from '../reserva';
+import { getReservaData, ReservaData } from '../reserva';
 import moment = require('moment');
 
 export const createReservaService = (request: Request, response: Response): Promise<any> => {
@@ -78,7 +78,7 @@ function createDocument(codigoReserva: string, userEmail: string, codigoPromocio
                     userUid: user.uid,
                     creationUserUid: user.uid,
                     officeUid: user.officeUid,
-                    main: { codigoReserva: codigoReserva, codigoPromocion: codigoPromocion }
+                    metadata: { codigoReserva: codigoReserva, codigoPromocion: codigoPromocion }
                 })
             ),
             switchMap(
@@ -99,7 +99,9 @@ function createDocument(codigoReserva: string, userEmail: string, codigoPromocio
 export const getReservaService = (request: Request, response: Response): Promise<any> => {
     const logInfo: LogInfo = new LogInfo('getReservaService', getUniqueId());
     logMessage(logInfo, '1. Init process');
-    return getReservaWSData(request.params.uid).pipe(
+    const promotionUid: string = request.params.promotionUid;
+    const codigoReserva: string = request.params.codigoReserva;
+    return getReservaData(logInfo, promotionUid, codigoReserva).pipe(
     ).toPromise()
         .then(
             data => {
@@ -117,39 +119,6 @@ export const getReservaService = (request: Request, response: Response): Promise
             }
         );
 };
-
-
-
-export function getReservaWSData(codigoReserva: string): Observable<Array<{ codigoReserva: string } & PromotionHabitat>> {
-    return getReservaSAPData(codigoReserva)
-        .pipe(
-            switchMap(
-                reservaData => getPromotionData(reservaData.RESERVA.INPUT)
-                    .pipe(
-                        map(
-                            promotions => promotions
-                                .map(
-                                    promotion => ({
-                                        ...promotion,
-                                        codigoReserva: codigoReserva
-                                    })
-                                )
-                        )
-                    )
-            ),
-            tap(
-                result => {
-                    console.log('result', result);
-                }
-            ),
-            catchError(
-                error => {
-                    console.error('Error getReservaWSData', error);
-                    return throwError(error);
-                }
-            )
-        );
-}
 
 export function getReservaSAPData(codigoReserva: string): Observable<ReservaData> {
     const parser: XMLParser = new XMLParser();
@@ -181,41 +150,6 @@ export function getReservaSAPData(codigoReserva: string): Observable<ReservaData
                 }
             )
         )
-}
-
-function getPromotionData(reservaInput: INPUT): Observable<Array<PromotionHabitat>> {// Check where is the promotion code in XML
-    if (!reservaInput || !reservaInput.TAB_DATOSPROMOCION || !reservaInput.TAB_DATOSPROMOCION.item.CODIGOPROMOCION) {
-        return throwError(`No existe código de promoción para esta reserva`);
-    }
-
-    const codPromo: string = reservaInput.TAB_DATOSPROMOCION.item.CODIGOPROMOCION;
-    return getPromotionHabitatByCodPromo(codPromo)
-        .pipe(
-            switchMap(
-                promotionsList => {
-                    if (!promotionsList.length) {
-                        return throwError(`No existe ninguna promoción con el código ${codPromo}`);
-                    }
-
-                    if (promotionsList.length > 1) {
-                        return of(promotionsList);
-                    }
-
-                    if (!promotionsList[0].active && !promotionsList[0].activeForFinancial) {
-                        return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Legal y por Dpto Financiero`);
-                    }
-                    if (!promotionsList[0].active) {
-                        return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Legal`);
-                    }
-                    if (!promotionsList[0].activeForFinancial) {
-                        return throwError(`La promoción ${promotionsList[0].nombrePromocion} (${codPromo}) está pendiente aprobar por Dpto Financiero`);
-                    }
-
-                    return of(promotionsList);
-                }
-            )
-        )
-
 }
 
 function callReservaWebService(codigoReserva): Promise<AxiosResponse<any, any>> {

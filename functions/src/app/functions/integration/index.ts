@@ -13,7 +13,7 @@ app.use(cors);
 
 app.get('/getSocieties', (request, response) => getSocietiesService(request, response));
 app.get('/getCompraventa/:id', (request, response) => getCompraventaService(request, response));
-app.get('/getReserva/:id', (request, response) => getReservaService(request, response));
+app.get('/getReserva/:codigoReserva/:promotionUid', (request, response) => getReservaService(request, response));
 app.get('/checkPBC/:documentUid', (request, response) => checkPBC(request, response));
 
 

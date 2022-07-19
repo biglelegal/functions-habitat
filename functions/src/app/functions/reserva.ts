@@ -6,7 +6,7 @@ import { getPromotionHabitatByUid } from '../utils/firebase';
 import { logMessage } from '../utils/utils';
 import { getReservaSAPData } from './integration/reserva';
 
-export function getReservaData(logInfo: LogInfo, codigoReserva: string, promotionUid: string): Observable<any> {
+export function getReservaData(logInfo: LogInfo, promotionUid: string, codigoReserva: string): Observable<any> {
 
     const errorValidation = validateRequestReserva(codigoReserva, logInfo);
     if (errorValidation) {
@@ -37,7 +37,7 @@ function validateRequestReserva(codigoReserva: string, logInfo: LogInfo): string
     return null;
 }
 
-function getReservaWSData(codigoReserva: string, promotionUid: string): Observable<{ reservaData: ReservaData, promotion: PromotionHabitat }> {
+export function getReservaWSData(codigoReserva: string, promotionUid: string): Observable<{ reservaData: ReservaData, promotion: PromotionHabitat }> {
     return combineLatest([
         getReservaSAPData(codigoReserva),
         getPromotionHabitatByUid(promotionUid)
