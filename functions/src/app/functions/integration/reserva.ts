@@ -1,17 +1,15 @@
 import axios, { AxiosResponse } from 'axios';
 import { Request, Response } from 'express';
+import { XMLParser } from 'fast-xml-parser';
 import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
-import * as xml2js from "xml2js";
 import { environment } from '../../../environments/environment';
 import { Document, PromotionHabitat } from '../../entities';
 import { LogInfo } from '../../entities/logInfo';
 import { getPromotionHabitatByCodPromo, getUserByEmail, setDocument } from '../../utils/firebase';
 import { errorResponse, getUniqueId, logMessage } from '../../utils/utils';
-import { ItemMessage } from '../documentData';
-import { ReservaData } from '../reserva';
+import { INPUT, ReservaData } from '../reserva';
 import moment = require('moment');
-const parser = new xml2js.Parser({ attrkey: "ATTR" });
 
 export const createReservaService = (request: Request, response: Response): Promise<any> => {
     const requestId = getUniqueId();
@@ -126,7 +124,7 @@ export function getReservaWSData(codigoReserva: string): Observable<Array<{ codi
     return getReservaSAPData(codigoReserva)
         .pipe(
             switchMap(
-                sapData => getPromotionData(sapData)
+                reservaData => getPromotionData(reservaData.RESERVA.INPUT)
                     .pipe(
                         map(
                             promotions => promotions
@@ -154,11 +152,12 @@ export function getReservaWSData(codigoReserva: string): Observable<Array<{ codi
 }
 
 export function getReservaSAPData(codigoReserva: string): Observable<ReservaData> {
+    const parser: XMLParser = new XMLParser();
     // const auth = `Basic ${Buffer.from('WS_BIGLE:BIGLESAP2021').toString('base64')}`; as long as we use their PRE URL is not necessary
     return from(callReservaWebService(codigoReserva))
         .pipe(
             map(
-                result => parseData(result.data)
+                result => parser.parse(result.data)
             ),
             tap(
                 parsedData => console.log('getReservaSAPData parsedData', JSON.stringify(parsedData))
@@ -184,28 +183,12 @@ export function getReservaSAPData(codigoReserva: string): Observable<ReservaData
         )
 }
 
-function parseData(data: any): ReservaData {
-    let parsedData: ReservaData = {};
-    parser.parseString(data, function (error, result) {
-        parsedData = result;
-    });
-    return parsedData
-}
-
-function processWSError(data: ReservaData): Observable<ReservaData> {
-    const errorMessage = new Array<ItemMessage>().concat(data.RESERVA.RESULT.MESSAGE.item)
-        .map(
-            item => item.MESSAGE
-        ).join(', ');
-    return throwError(errorMessage);
-}
-
-function getPromotionData(reservaData: ReservaData): Observable<Array<PromotionHabitat>> {// Check where is the promotion code in XML
-    if (!reservaData || !reservaData.RESERVA || !reservaData.RESERVA.INPUT.CPROMO) {
+function getPromotionData(reservaInput: INPUT): Observable<Array<PromotionHabitat>> {// Check where is the promotion code in XML
+    if (!reservaInput || !reservaInput.TAB_DATOSPROMOCION || !reservaInput.TAB_DATOSPROMOCION.item.CODIGOPROMOCION) {
         return throwError(`No existe código de promoción para esta reserva`);
     }
 
-    const codPromo: string = reservaData.RESERVA.INPUT.CPROMO;
+    const codPromo: string = reservaInput.TAB_DATOSPROMOCION.item.CODIGOPROMOCION;
     return getPromotionHabitatByCodPromo(codPromo)
         .pipe(
             switchMap(
