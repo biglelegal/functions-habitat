@@ -26,10 +26,15 @@ export const createReservaService = (request: Request, response: Response): Prom
         response.status(403).json(errorResponse(logInfo, 'Autorización inválida'));
     }
 
+    const body: { codigoReserva: string, userEmail: string, codigoPromocion: string } = request.body;
 
-    const codigoReserva: string = request.body.codigoReserva;
-    const userEmail: string = request.body.userEmail;
-    const codigoPromocion: string = request.body.codigoPromocion;
+    if (!body) {
+        response.status(500).json(errorResponse(logInfo, 'Cuerpo de la petición no informado'));
+    }
+
+    const codigoReserva: string = body.codigoReserva;
+    const userEmail: string = body.userEmail;
+    const codigoPromocion: string = body.codigoPromocion;
 
     if (!codigoReserva) {
         response.status(500).json(errorResponse(logInfo, 'Código de reserva no informado'));
