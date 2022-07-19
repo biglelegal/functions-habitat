@@ -84,5 +84,107 @@ function processReservaData(data: { reservaData: ReservaData, promotion: Promoti
 }
 
 export interface ReservaData {
-    RESERVA?: any;
+    RESERVA?: RESERVA;
+}
+
+export interface RESERVA {
+    INPUT?: INPUT;
+}
+export interface INPUT {
+    TAB_DATOSRESERVA?: TAB_DATOSRESERVA;
+    TAB_DATOSPROMOCION?: TAB_DATOSPROMOCION;
+    TAB_COMPRADORES?: TAB_COMPRADORES;
+    TAB_REPRESENTANTESLEGALES?: TAB_REPRESENTANTESLEGALES;
+    TAB_UNIDADESVENTA?: TAB_UNIDADESVENTA;
+}
+
+export interface TAB_DATOSRESERVA {
+    item?: TAB_DATOSRESERVA_ITEM;
+}
+
+export interface TAB_DATOSRESERVA_ITEM {
+    PROMOCION: string;
+    INTERES: string;
+    CONTACTOVINCULADO: string;
+    CONTACTO: string;
+    VENDEDOR: string;
+}
+
+export interface TAB_DATOSPROMOCION {
+    item?: TAB_DATOSPROMOCION_ITEM;
+}
+
+export interface TAB_DATOSPROMOCION_ITEM {
+    NVIVIENDAS: string | number;
+    NTRASTEROS: string | number;
+    NGARAJES: string | number;
+    NLOCALES: string | number;
+    CODIGOPROMOCION: string;
+
+}
+
+export interface TAB_COMPRADORES {
+    item?: TAB_COMPRADORES_ITEM | Array<TAB_COMPRADORES_ITEM>;
+}
+
+export interface TAB_COMPRADORES_ITEM {
+    ROL: string;
+    PORCENTAJECOMPRA: string | number;
+    PERSONAFISICAJURIDICA: string;
+    ESTADOCIVIL: string;
+    TRATAMIENTO: string;
+    CONTFULLNAME: string;
+    CONTDNI: string;
+    CONTADDRESS1_LINE1: string;
+    CONTTELEPHONE1: string;
+    CONTTELEPHONE2: string;
+    CONTEMAILADDRESS1: string;
+    CONTEMAILADDRESS2: string;
+    CONTNOMBRENOTARIO: string;
+    CONTCIUDADNOTARIO: string;
+    CONTFECHACONSTITUCION: string;
+    CONTNPROTOCOLO: string;
+    CONTREGISTROMERCANTIL: string;
+    CONTTOMO: string;
+    CONTLIBRO: string;
+    CONTFOLIO: string;
+    CONTSECCION: string;
+    CONTHOJA: string;
+}
+
+export interface TAB_REPRESENTANTESLEGALES {
+    item?: TAB_REPRESENTANTESLEGALES_ITEM | Array<TAB_REPRESENTANTESLEGALES_ITEM>;
+}
+
+export interface TAB_REPRESENTANTESLEGALES_ITEM {
+    TIPOREPRESENTANTELEGAL: string;
+    CODIGOSAP: string | number;
+    PERSONAFISICAJURIDICA: string;
+    TRATAMIENTO: string;
+    NOMBRENOTARIO: string;
+    NUMEROPROTOCOLO: string | number;
+    CIUDADNOTARIO: string;
+    TIPOPODER: string;
+    FECHAESCRITURACIONAPODERAMIENTO: string;
+    CONTFULLNAME: string;
+    CONTDNI: string;
+    CONTADDRESS1_LINE1: string;
+    CONTTELEPHONE1: string | number;
+    CONTTELEPHONE2: string | number;
+    CONTEMAILADDRESS1: string;
+    CONTEMAILADDRESS2: string;
+}
+
+export interface TAB_UNIDADESVENTA {
+    item?: TAB_UNIDADESVENTA_ITEM | Array<TAB_UNIDADESVENTA_ITEM>;
+}
+
+export interface TAB_UNIDADESVENTA_ITEM {
+    BLOQUE: string | number;
+    PORTAL: string | number;
+    ESCALERA: string | number;
+    PLANTA: string | number;
+    PUERTANUMERO: string | number;
+    SUPERFICIEMT2UTIL: string | number;
+    SUPERFICIEMT2CONS: string | number;
 }
