@@ -4,7 +4,6 @@ import { Observable, throwError } from 'rxjs';
 import { LogInfo } from '../entities/logInfo';
 import { errorResponse, getUniqueId, logMessage } from '../utils/utils';
 import { getCompraventaData } from './compraventa';
-import { getReservaData } from './reserva';
 import moment = require('moment');
 // CORS Express middleware to enable CORS Requests.
 const cors = require('cors')({ origin: true });
@@ -46,7 +45,7 @@ function validateRequest(crm: string, requestParams: { codigoReserva: string, ui
         logMessage(logInfo, 'Error', 'crm_not_found');
         return 'crm_not_found';
     }
-    if (!['compraventa', 'reserva'].includes(crm)) {
+    if (!['compraventa'].includes(crm)) {
         logMessage(logInfo, 'Error', 'wrong_crm');
         return 'wrong_crm';
     }
@@ -69,8 +68,6 @@ function getDocumentData(logInfo, crm: string, requestParams: { codigoReserva: s
     switch (crm) {
         case 'compraventa':
             return getCompraventaData(logInfo, requestParams.codigoReserva as string, requestParams.uid as string);
-        case 'reserva':
-            return getReservaData(logInfo, requestParams.codigoReserva as string, requestParams.uid as string);
     }
     return throwError('wrong_crm');
 }
