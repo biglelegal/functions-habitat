@@ -23,14 +23,27 @@ export const createReservaService = (request: Request, response: Response): Prom
     const match = regex.exec(authorization);
 
     if (match.length > 1 && match[1] !== environment.authorizationReserva) {
-        response.status(403).json(errorResponse(logInfo, 'Invalid Authorization'));
+        response.status(403).json(errorResponse(logInfo, 'Autorización inválida'));
     }
+
 
     const codigoReserva: string = request.body.codigoReserva;
     const userEmail: string = request.body.userEmail;
+    const codigoPromocion: string = request.body.codigoPromocion;
 
+    if (!codigoReserva) {
+        response.status(500).json(errorResponse(logInfo, 'Código de reserva no informado'));
+    }
 
-    return createDocument(codigoReserva, userEmail, requestId).pipe(
+    if (!userEmail) {
+        response.status(500).json(errorResponse(logInfo, 'Usuario no informado'));
+    }
+
+    if (!codigoPromocion) {
+        response.status(500).json(errorResponse(logInfo, 'Código de promoción no informado'));
+    }
+
+    return createDocument(codigoReserva, userEmail, codigoPromocion, requestId).pipe(
     ).toPromise()
         .then(
             data => {
@@ -49,20 +62,20 @@ export const createReservaService = (request: Request, response: Response): Prom
         );
 };
 
-function createDocument(codigoReserva: string, userEmail: string, requestId: string): Observable<{ creationTime: string, url: string, requestId: string }> {
+function createDocument(codigoReserva: string, userEmail: string, codigoPromocion: string, requestId: string): Observable<{ creationTime: string, url: string, requestId: string }> {
     return getUserByEmail(userEmail)
         .pipe(
             map(
                 user => ({
                     ...new Document(),
-                    name: `Reserva - ${codigoReserva}`,
+                    name: `Reserva - ${codigoReserva} - ${codigoPromocion}`,
                     typeUid: environment.reservaModelUid,
                     uid: getUniqueId(),
                     creationTime: new Date().getTime(),
                     userUid: user.uid,
                     creationUserUid: user.uid,
                     officeUid: user.officeUid,
-                    main: { codigoReserva: codigoReserva }
+                    main: { codigoReserva: codigoReserva, codigoPromocion: codigoPromocion }
                 })
             ),
             switchMap(
