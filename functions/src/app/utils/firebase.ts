@@ -3,6 +3,7 @@ import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Document, PromotionHabitat, User } from '../entities';
 import { Society } from '../entities/blocks/society';
+import { DocType } from '../entities/promotionHabitat';
 
 export function getSocieties(): Observable<Array<Society>> {
     return from(admin.firestore().collection(`societies`).get())
@@ -92,8 +93,38 @@ export function getDocumentByUid(uid: string): Observable<Document> {
         );
 }
 
+export function getModelByUid(uid: string): Observable<DocType> {
+    return from(admin.firestore().doc(`models/${uid}`).get())
+        .pipe(
+            map(
+                modelDB => {
+                    if (!modelDB) {
+                        return null;
+                    }
+                    return modelDB.data() as DocType;
+                }
+            ),
+            catchError(
+                error => {
+                    return of(null);
+                }
+            )
+        );
+}
+
 export function setDocument(document: Document): Observable<Document> {
     return from(admin.firestore().doc(`documents/${document.uid}`).set(Document.extract(document)))
+        .pipe(
+            catchError(
+                error => {
+                    return of(null);
+                }
+            )
+        );
+}
+
+export function setDocumentMain(docUid: string, main: any): Observable<void> {
+    return from(admin.firestore().doc(`documents/${docUid}`).set({ main: main }, { merge: true }))
         .pipe(
             catchError(
                 error => {
