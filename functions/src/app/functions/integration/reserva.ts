@@ -8,7 +8,7 @@ import { Document } from '../../entities';
 import { LogInfo } from '../../entities/logInfo';
 import { getUserByEmail, setDocument } from '../../utils/firebase';
 import { errorResponse, getUniqueId, logMessage } from '../../utils/utils';
-import { getReservaData, ReservaData } from '../reserva';
+import { getReservaData } from '../reserva';
 import moment = require('moment');
 
 export const createReservaService = (request: Request, response: Response): Promise<any> => {
@@ -96,31 +96,32 @@ function createDocument(codigoReserva: string, userEmail: string, codigoPromocio
         )
 }
 
-export const getReservaService = (request: Request, response: Response): Promise<any> => {
-    const logInfo: LogInfo = new LogInfo('getReservaService', getUniqueId());
+export const integrateReservaService = (request: Request, response: Response): Promise<any> => {
+    const logInfo: LogInfo = new LogInfo('integrateReservaService', getUniqueId());
     logMessage(logInfo, '1. Init process');
+    const documentUid: string = request.params.documentUid;
     const promotionUid: string = request.params.promotionUid;
     const codigoReserva: string = request.params.codigoReserva;
-    return getReservaData(logInfo, promotionUid, codigoReserva).pipe(
+    return getReservaData(logInfo, documentUid, promotionUid, codigoReserva).pipe(
     ).toPromise()
         .then(
-            data => {
-                logMessage(logInfo, 'end getReservaService');
-                response.status(200).json(data);
+            () => {
+                logMessage(logInfo, 'end integrateReservaService');
+                response.status(200).json('integrateReservaService ok');
             }
         ).catch(
             err => {
-                logMessage(logInfo, 'Error getReservaService', err);
+                logMessage(logInfo, 'Error integrateReservaService', err);
                 if (typeof err === 'string') {
-                    response.status(500).json(errorResponse(logInfo, err, 'Error getReservaService'));
+                    response.status(500).json(errorResponse(logInfo, err, 'Error integrateReservaService'));
                 } else {
-                    response.status(500).json(errorResponse(logInfo, 'Error getReservaService', err));
+                    response.status(500).json(errorResponse(logInfo, 'Error integrateReservaService', err));
                 }
             }
         );
 };
 
-export function getReservaSAPData(codigoReserva: string): Observable<ReservaData> {
+export function getReservaSAPData(codigoReserva: string): Observable<any> {
     const parser: XMLParser = new XMLParser();
     // const auth = `Basic ${Buffer.from('WS_BIGLE:BIGLESAP2021').toString('base64')}`; as long as we use their PRE URL is not necessary
     return from(callReservaWebService(codigoReserva))
