@@ -126,6 +126,27 @@ export class DocType {
     availableOffices: Array<string> = new Array<string>();
     editing?: boolean = false;
     convertedToModel?: boolean = false;
+    static extract(item: DocType): any {
+        const res: any = {};
+        res['order'] = item.order || 0;
+        res['name'] = item.name || '';
+        res['idName'] = item.idName || '';
+        res['permisions'] = item.permisions || '';
+        res['active'] = item.active || false;
+        res['deprecated'] = item.deprecated || false;
+        res['review'] = item.review || false;
+        res['description'] = item.description || '';
+        res['thankyouMessageFinish'] = item.thankyouMessageFinish || '';
+        res['thankyouMessageSign'] = item.thankyouMessageSign || '';
+        res['imgSrc'] = item.imgSrc || '';
+        res['category'] = item.category || '';
+        res['config'] = DocTypeConfig.extract(item.config);
+        res['config']['blocks'] = null;
+        res['uid'] = item.uid || '';
+        res['availableOffices'] = item.availableOffices || new Array<string>();
+        res['convertedToModel'] = item.convertedToModel || false;
+        return res;
+    }
 }
 export class DocTypeConfig {
     templateName: string = '';
@@ -163,6 +184,40 @@ export class DocTypeConfig {
     isPpt?: boolean = false;
     hasCrmData: boolean = false;
     activeCrm: any = {};
+    static extract(item: DocTypeConfig): any {
+        const res: any = {};
+        res['templateName'] = item.templateName || '';
+        res['downloadName'] = item.downloadName || '';
+        res['exportFormat'] = item.exportFormat || '';
+        res['importFormat'] = item.importFormat || '';
+        res['activeExport'] = item.activeExport || false;
+        res['activeAutofill'] = item.activeAutofill || false;
+        res['activeImport'] = item.activeImport || false;
+        res['downloadFormat'] = item.downloadFormat || '';
+        res['downloadMatrixFormat'] = item.downloadMatrixFormat || '';
+        res['downloadFormatClient'] = item.downloadFormatClient || '';
+        res['downloadMatrixFormatClient'] = item.downloadMatrixFormatClient || '';
+        res['allowIncompleteDownload'] = item.allowIncompleteDownload || false;
+        res['allowSendLink'] = item.allowSendLink || false;
+        res['allowSendDraft'] = item.allowSendDraft || false;
+        res['allowSendReminder'] = item.allowSendReminder || false;
+        res['allowSendCancelation'] = item.allowSendCancelation || false;
+        res['allowCertifiedEmail'] = item.allowCertifiedEmail || false;
+        res['allowSignature'] = item.allowSignature || false;
+        res['allowFinishSignatureEmail'] = item.allowFinishSignatureEmail || false;
+        res['isAutoSignature'] = item.isAutoSignature || false;
+        res['allowSignatureReminder'] = item.allowSignatureReminder || false;
+        res['allowSignatureCancelation'] = item.allowSignatureCancelation || false;
+        res['officeMetadata'] = item.officeMetadata || false;
+        res['userMetadata'] = item.userMetadata || false;
+        res['allowEmptyFile'] = item.allowEmptyFile || false;
+        res['isPpt'] = item.isPpt || false;
+        res['languages'] = item.languages || null;
+        res['hasCrmData'] = item.hasCrmData || false;
+        res['activeCrm'] = item.activeCrm || {};
+
+        return res;
+    }
 }
 export class DocTypeBlock {
     uid: string = '';
@@ -267,6 +322,20 @@ export class TableParams extends FieldParams {
     fieldColumns: Array<Field> = new Array<Field>();
 }
 
+export class MultiInputParams extends FieldParams {
+    type: string = 'text';
+    placeholder: string = '';
+    pattern: string = null;
+    requiredErrorMessage: string = '';
+    patternErrorMessage: string = '';
+}
+
+export class MultiCheckboxParams extends FieldParams {
+    checkRequired: boolean = false;
+    allCheckRequired: boolean = false;
+    checkboxList: Array<CheckboxOption> = null;
+}
+
 export class AddressParams extends PredefConfig {
     addressTitle: string = '';
     styleInput: string = '';
@@ -282,6 +351,64 @@ export class AddressParams extends PredefConfig {
     country: Field = new Field();
 }
 
+export class TimeDurationParams extends PredefConfig {
+    autocalculatedField: string = '';
+    initDate: Field = new Field();
+    endDate: Field = new Field();
+    duration: Field = new Field();
+}
+
+export class DurationParams extends FieldParams {
+    isYears: boolean = true;
+    isMonths: boolean = true;
+    isDays: boolean = true;
+    isHours: boolean = true;
+    isMinutes: boolean = true;
+    isSeconds: boolean = true;
+}
+
+export class InputParams extends FieldParams {
+    pattern: string = null;
+    type: string = 'text';
+    maxLength: number = 0;
+    min: number = 0;
+    max: number = 0;
+    step: number = 1;
+    placeholder: string = '';
+    requiredErrorMessage: string = '';
+    patternErrorMessage: string = '';
+    money: boolean = false;
+    percentage: boolean = false;
+}
+
+export class TimeDuration {
+    initDate: number = 0;
+    endDate: number = 0;
+    duration: Duration = new Duration();
+    validation: Validation = new Validation();
+}
+export class Duration {
+    years: number = 0;
+    months: number = 0;
+    days: number = 0;
+    hours: number = 0;
+    minutes: number = 0;
+    seconds: number = 0;
+}
+
+export class Validation {
+    name: string = '';
+    valid: boolean = true;
+    completed: boolean = true;
+    totalFields: number = 0;
+    invalidFields: number = 0;
+    merge(validation: Validation) {
+        this.valid = this.valid && validation.valid;
+        this.completed = this.completed && validation.completed;
+        this.totalFields += validation.totalFields;
+        this.invalidFields += validation.invalidFields;
+    }
+}
 export class NaturalPersonParams extends PredefConfig {
     hasMetadata: boolean = false;
     hasCrmData: boolean = false;
@@ -455,4 +582,37 @@ export class AssetParams extends PredefConfig {
     merchantLicense: Field = new Field();
     cityHallLicense: Field = new Field();
     dateLicense: Field = new Field();
+}
+
+export class Model extends DocType {
+    blocks: Array<string> = new Array<string>();
+}
+
+export class ModelBlock {
+    uid: string;
+    block: DocTypeBlock;
+    subBlocks: Array<string>;
+    fields: Array<string>;
+    customFields: Array<string>;
+    predefTypeName?: string = null;
+    constructor() {
+        this.uid = ((1 + Math.random()) * 0x10000).toString(16).replace('.', '');
+        this.block = new DocTypeBlock();
+        this.block.name = `Block_${this.uid.substring(0, 8)}`;
+        this.subBlocks = new Array<string>();
+        this.fields = new Array<string>();
+        this.customFields = new Array<string>();
+    }
+}
+
+export class ModelField {
+    uid: string;
+    field: Field = new Field();
+    fieldBlocks: Array<string>;
+    constructor() {
+        this.uid = ((1 + Math.random()) * 0x10000).toString(16).replace('.', '');
+        this.field = new Field();
+        this.field.name = `Field_${this.uid.substring(0, 8)}`;
+        this.fieldBlocks = new Array<string>();
+    }
 }

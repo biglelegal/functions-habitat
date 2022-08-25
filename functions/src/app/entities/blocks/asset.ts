@@ -1,3 +1,4 @@
+import { Validation } from '../promotionHabitat';
 import { Address } from './address';
 import { NaturalPerson } from './naturalPerson';
 import { RegistryData } from './registryData';
@@ -29,4 +30,5 @@ export class Asset {
     merchantLicense: string = '';
     cityHallLicense: string = '';
     dateLicense: number = 0;
+    validation: Validation = new Validation();
 }
