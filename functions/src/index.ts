@@ -6,6 +6,8 @@ admin.initializeApp({
     databaseURL: environment.databaseURL
 });
 
+admin.firestore().settings({ ignoreUndefinedProperties: true });
+
 export { getMainDocumentData } from './app/functions/documentData';
 export { integration } from './app/functions/integration';
 export { changePassword } from './app/functions/password';
