@@ -11,7 +11,7 @@ import { errorResponse, getUniqueId, logMessage } from '../../utils/utils';
 import { getReservaData } from '../reserva';
 import moment = require('moment');
 
-export const createReservaService = (request: Request, response: Response): Promise<any> => {
+export const createReservaService = (request: Request, response: Response): Promise<any> | Response => {
     const requestId = getUniqueId();
     const logInfo: LogInfo = new LogInfo('createReservaService', requestId);
     logMessage(logInfo, '1. createReservaService Init process');
@@ -21,13 +21,13 @@ export const createReservaService = (request: Request, response: Response): Prom
     const match = regex.exec(authorization);
 
     if (match.length > 1 && match[1] !== environment.authorizationReserva) {
-        response.status(403).json(errorResponse(logInfo, 'Autorización inválida'));
+        return response.status(403).json(errorResponse(logInfo, 'Autorización inválida'));
     }
 
     const body: { codigoReserva: string, userEmail: string, codigoPromocion: string } = request.body;
 
     if (!body) {
-        response.status(500).json(errorResponse(logInfo, 'Cuerpo de la petición no informado'));
+        return response.status(500).json(errorResponse(logInfo, 'Cuerpo de la petición no informado'));
     }
 
     const codigoReserva: string = body.codigoReserva;
@@ -35,15 +35,15 @@ export const createReservaService = (request: Request, response: Response): Prom
     const codigoPromocion: string = body.codigoPromocion;
 
     if (!codigoReserva) {
-        response.status(500).json(errorResponse(logInfo, 'Código de reserva no informado'));
+        return response.status(500).json(errorResponse(logInfo, 'Código de reserva no informado'));
     }
 
     if (!userEmail) {
-        response.status(500).json(errorResponse(logInfo, 'Usuario no informado'));
+        return response.status(500).json(errorResponse(logInfo, 'Usuario no informado'));
     }
 
     if (!codigoPromocion) {
-        response.status(500).json(errorResponse(logInfo, 'Código de promoción no informado'));
+        return response.status(500).json(errorResponse(logInfo, 'Código de promoción no informado'));
     }
 
     return createDocument(codigoReserva, userEmail, codigoPromocion, requestId).pipe(
@@ -78,6 +78,7 @@ function createDocument(codigoReserva: string, userEmail: string, codigoPromocio
                     userUid: user.uid,
                     creationUserUid: user.uid,
                     officeUid: user.officeUid,
+                    main: {},
                     metadata: { codigoReserva: codigoReserva, codigoPromocion: codigoPromocion }
                 })
             ),
@@ -123,14 +124,13 @@ export const integrateReservaService = (request: Request, response: Response): P
 
 export function getReservaSAPData(codigoReserva: string): Observable<any> {
     const parser: XMLParser = new XMLParser();
-    // const auth = `Basic ${Buffer.from('WS_BIGLE:BIGLESAP2021').toString('base64')}`; as long as we use their PRE URL is not necessary
     return from(callReservaWebService(codigoReserva))
         .pipe(
             map(
                 result => parser.parse(result.data)
             ),
             tap(
-                parsedData => console.log('getReservaSAPData parsedData', JSON.stringify(parsedData))
+                parsedData => console.log('getReservaSAPData parsedData: ', JSON.stringify(parsedData))
             ),
             // Mirar van a enviar los errores para este nuevo endpoint
             // switchMap(
