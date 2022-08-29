@@ -29,6 +29,6 @@ export const environment = {
   reserva: {
     url: 'https://prod-251.westeurope.logic.azure.com/workflows/d40804a8d3454871a3a0a1bcb655ed0f/triggers/manual/paths/invoke?api-version=2016-06-01&sp=/triggers/manual/run&sv=1.0&sig=CRntvmbYsTqy0WbiOUlEf15QvMwp_FHhgcEud-ArM44'
   },
-  reservaModelUid: '145b1def64603e',
+  reservaModelUid: '1ccf89f3b953c8',
   authorizationReserva: 'EA0D1E03F6BA6370A6B7DDFABA145F80B8F49273F8FC2C8708EF87D9536A4679'
 };

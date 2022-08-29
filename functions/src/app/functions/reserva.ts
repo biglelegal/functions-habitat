@@ -22,7 +22,7 @@ export function getReservaData(logInfo: LogInfo, documentUid: string, promotionU
     return getReservaWSData(codigoReserva, promotionUid)
         .pipe(
             switchMap(
-                rawData => processReservaData(rawData)
+                rawData => processReservaData(rawData, codigoReserva)
             ),
             tap(
                 reserva => console.log('Data before integrate: ', JSON.stringify(reserva))
@@ -66,7 +66,7 @@ export function getReservaWSData(codigoReserva: string, promotionUid: string): O
         );
 }
 
-function processReservaData(data: { reservaData: ReservaData, promotion: PromotionHabitat }): Observable<unknown> {
+function processReservaData(data: { reservaData: ReservaData, promotion: PromotionHabitat }, codigoReserva: string): Observable<unknown> {
 
     if (data.promotion && !data.promotion.active && !data.promotion.activeForFinancial) {
         return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Legal y por Dpto Financiero`);
@@ -86,7 +86,11 @@ function processReservaData(data: { reservaData: ReservaData, promotion: Promoti
 
     return of({
         ...data.promotion,
+        codigoReserva: codigoReserva,
+        finishedPromotion: data.promotion.faseada ? 'yes' : 'no',
+        cv: { genderCv: data.promotion.genderCv, nameCv: data.promotion.nameCv },
         comprador: getReservaCompradores(compradores, representantes),
+
         // inmueble: getInmuebles(unidades),
         promocionNumberViviendas: datosPromocion.NVIVIENDAS,
         promocionNumberTrasteros: datosPromocion.NTRASTEROS,
