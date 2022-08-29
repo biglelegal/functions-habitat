@@ -1,29 +1,40 @@
 
+
 export class PromotionHabitat {
     uid: string = '';
     active: boolean = false;
     activeForFinancial: boolean = false;
-    shareLicenciaObras: boolean = false;
     faseada: boolean = false;
+    shareLicenciaObras: boolean = false;
     nombrePromocion: string = '';
     codigoPromocion: string = '';
     sociedad: string = '';
     cuentaBancaria: string = '';
     entidadBancaria: string = '';
     entidadBancaria2: string = '';
+    cargas: string = '';
     contentCargas: string = '';
+    aditionCargas: string = '';
+    hipotecaEntity: string = '';
+    hipotecaPrincipal: string = '';
+    hipotecaNotaryGender: string = '';
+    hipotecaNotaryName: string = '';
+    hipotecaNotaryLastName1: string = '';
+    hipotecaNotaryCity: string = '';
+    hipotecaGrantingDate: number;
+    hipotecaProtocolNumber: string = '';
     inmueble: Array<{
         descripcionFinca: string,
         tituloFinca: string,
         lugarEscritura: string,
         numRegistroPropiedad: string,
-        numeroFinca: number,
+        numeroFinca: string,
     }> = [{
         descripcionFinca: '',
         tituloFinca: '',
         lugarEscritura: '',
         numRegistroPropiedad: '',
-        numeroFinca: 0,
+        numeroFinca: '',
 
     }]
     notarioGenero: string = '';
@@ -54,8 +65,19 @@ export class PromotionHabitat {
     constructoraRegistryCity: string = '';
     constructoraRegistrySheet: string = '';
     adicional: string = '';
-    tituloClausula: string = '';
-    contenidoClausula: string = '';
+    genderCv: string = '';
+    nameCv: string = '';
+    valencia: string = '';
+    dh: string = '';
+    avales: string = '';
+    clausula: Array<{
+        tituloClausula: string,
+        contenidoClausula: string
+    }> = [{
+        tituloClausula: '',
+        contenidoClausula: ''
+
+    }]
     promocionNumberViviendas: number = 0;
     promocionNumberPlazas: number = 0;
     promocionNumberBicicletas: number = 0;
