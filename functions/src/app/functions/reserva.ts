@@ -10,6 +10,7 @@ import { LogInfo } from '../entities/logInfo';
 import { AddressParams, AssetParams, CheckboxBlockParams, DocType, DocTypeBlock, DurationParams, Field, GenericPersonParams, InputParams, LegalPersonParams, MultiCheckboxParams, MultiInputParams, NaturalPersonParams, PredefConfig, PredefType, RadioBlockParams, RegistryDataParams, RepresentativeDataParams, TableParams, TimeDuration, TimeDurationParams } from '../entities/promotionHabitat';
 import { getDocTypeByUid, getPromotionHabitatByUid, setDocumentMainPercentage } from '../utils/firebase';
 import { logMessage } from '../utils/utils';
+import { getHorizontal } from './compraventa';
 import { getReservaSAPData } from './integration/reserva';
 import moment = require('moment');
 
@@ -92,6 +93,7 @@ function processReservaData(data: { reservaData: ReservaData, promotion: Promoti
         comprador: getReservaCompradores(compradores, representantes),
 
         // inmueble: getInmuebles(unidades),
+        horizontal: getHorizontal(data.promotion.escriturasPublicas),
         promocionNumberViviendas: datosPromocion.NVIVIENDAS,
         promocionNumberTrasteros: datosPromocion.NTRASTEROS,
         promocionNumberPlazas: datosPromocion.NGARAJES,

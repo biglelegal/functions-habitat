@@ -803,7 +803,7 @@ function validateRequestCompraventa(codigoReserva: string, logInfo: LogInfo): st
     return null;
 }
 
-function getHorizontal(escriturasPublicas: string) {
+export function getHorizontal(escriturasPublicas: string) {
     if (escriturasPublicas === 'ambas') {
         return 'yes';
     }
