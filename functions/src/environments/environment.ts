@@ -27,7 +27,7 @@ export const environment = {
     url: 'https://ws.habitat.es:8200/sap/bc/srt/wsdl/flv_10002A111AD1/bndg_url/sap/bc/srt/rfc/sap/zhab_wscon_get_data_solicitud/100/zhab_wscon_get_data_solicitud/zhab_wscon_get_data_solicitud_binding?sap-client=100'
   },
   reserva: {
-    url: 'https://prod-251.westeurope.logic.azure.com/workflows/d40804a8d3454871a3a0a1bcb655ed0f/triggers/manual/paths/invoke?api-version=2016-06-01&sp=/triggers/manual/run&sv=1.0&sig=CRntvmbYsTqy0WbiOUlEf15QvMwp_FHhgcEud-ArM44'
+    url: 'https://prod-111.westeurope.logic.azure.com:443/workflows/15592b045b5e4219939a74bccb0d24d7/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=8QkYZ8b2jJB48g1Qnb5gZaS5-LRTBx9QbrxZnrqbbMA'
   },
   reservaModelUid: '1ccf89f3b953c8',
   authorizationReserva: 'EA0D1E03F6BA6370A6B7DDFABA145F80B8F49273F8FC2C8708EF87D9536A4679'
