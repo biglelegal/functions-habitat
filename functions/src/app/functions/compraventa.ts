@@ -558,7 +558,7 @@ function getInmuebleHorizontalDatosRegistrales(inmueble: ItemUnidades, numeroReg
         ...inmueble,
         horizontalRegistryCity: lugarRegistro,
         horizontalRegistryNumber: numeroRegistro,
-        horizontalRegistryPropertyNumber: getNumberValue(inmueble, 'IFINCA'),
+        horizontalRegistryPropertyNumber: getStringValue(inmueble, 'IFINCA'),
         cuotaVivienda: getNumberValue(inmueble, 'PCOGEN'),
     });
 }
