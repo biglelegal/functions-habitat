@@ -24,6 +24,7 @@ export const integration = functions
     .region('us-central1')
     .runWith({
         vpcConnector: 'us-static-funct-connector',
-        vpcConnectorEgressSettings: 'ALL_TRAFFIC'
+        vpcConnectorEgressSettings: 'ALL_TRAFFIC',
+        timeoutSeconds: 540
     })
     .https.onRequest(app);

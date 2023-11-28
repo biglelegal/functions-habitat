@@ -1,6 +1,5 @@
 import { combineLatest, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
-import { environment } from '../../environments/environment';
 import { PromotionHabitat } from '../entities';
 import { Address, Asset, GenericPerson } from '../entities/blocks';
 import { LegalPerson } from '../entities/blocks/legalPerson';
@@ -8,9 +7,8 @@ import { NaturalPerson } from '../entities/blocks/naturalPerson';
 import { RegistryData, RepresentativeData } from '../entities/blocks/registryData';
 import { LogInfo } from '../entities/logInfo';
 import { AddressParams, AssetParams, CheckboxBlockParams, DocType, DocTypeBlock, DurationParams, Field, GenericPersonParams, InputParams, LegalPersonParams, MultiCheckboxParams, MultiInputParams, NaturalPersonParams, PredefConfig, PredefType, RadioBlockParams, RegistryDataParams, RepresentativeDataParams, TableParams, TimeDuration, TimeDurationParams } from '../entities/promotionHabitat';
-import { getDocTypeByUid, getPromotionHabitatByUid, setDocumentMainPercentage } from '../utils/firebase';
+import { getDocTypeByUid, getDocumentByUid, getPromotionHabitatByUid, setDocumentMainPercentage } from '../utils/firebase';
 import { logMessage } from '../utils/utils';
-import { getHorizontal } from './compraventa';
 import { getReservaSAPData } from './integration/reserva';
 import moment = require('moment');
 
@@ -23,15 +21,18 @@ export function getReservaData(logInfo: LogInfo, documentUid: string, promotionU
     return getReservaWSData(codigoReserva, promotionUid)
         .pipe(
             switchMap(
-                rawData => processReservaData(rawData, codigoReserva)
+                rawData => combineLatest([
+                    processReservaData(rawData, codigoReserva),
+                    getDocumentByUid(documentUid)
+                ])
             ),
             tap(
-                reserva => console.log('Data before integrate: ', JSON.stringify(reserva))
+                ([reserva, document]) => console.log('Data before integrate: ', JSON.stringify(reserva))
             ),
             switchMap(
-                processedData => combineLatest([
-                    of(processedData),
-                    getDocTypeByUid(environment.reservaModelUid)
+                ([reserva, document]) => combineLatest([
+                    of(reserva),
+                    getDocTypeByUid(document.typeUid)
                 ])
             ),
             switchMap(
@@ -69,35 +70,257 @@ export function getReservaWSData(codigoReserva: string, promotionUid: string): O
 
 function processReservaData(data: { reservaData: ReservaData, promotion: PromotionHabitat }, codigoReserva: string): Observable<unknown> {
 
-    if (data.promotion && !data.promotion.active && !data.promotion.activeForFinancial) {
+    if (data.promotion && !data.promotion.activeForLegalReserva && !data.promotion.activeForFinancialReserva) {
         return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Legal y por Dpto Financiero`);
     }
 
-    if (data.promotion && !data.promotion.active) {
+    if (data.promotion && !data.promotion.activeForLegalReserva) {
         return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Legal`);
     }
 
-    if (data.promotion && !data.promotion.activeForFinancial) {
+    if (data.promotion && !data.promotion.activeForFinancialReserva) {
         return throwError(`La promoción ${data.promotion.nombrePromocion} (${data.promotion.codigoPromocion}) está pendiente aprobar por Dpto Financiero`);
     }
-    const compradores: Array<TAB_COMPRADORES_ITEM> = [].concat(data.reservaData.RESERVA.INPUT.TAB_COMPRADORES.item);
-    const representantes: Array<TAB_REPRESENTANTESLEGALES_ITEM> = [].concat(data.reservaData.RESERVA.INPUT.TAB_COMPRADORES.item);
-    const datosPromocion: TAB_DATOSPROMOCION_ITEM = [].concat(data.reservaData.RESERVA.INPUT.TAB_DATOSPROMOCION.item)[0];
-    const unidades: TAB_DATOSPROMOCION_ITEM = [].concat(data.reservaData.RESERVA.INPUT.TAB_DATOSPROMOCION.item)[0];
-
+    const datosReserva: TAB_DATOSRESERVA_ITEM = [].concat(data.reservaData.RESERVA.INPUT.TAB_DATOSRESERVA.item).filter(x => !!x)[0];
+    const compradores: Array<TAB_COMPRADORES_ITEM> = [].concat(data.reservaData.RESERVA.INPUT.TAB_COMPRADORES.item).filter(x => !!x);
+    const representantes: Array<TAB_REPRESENTANTESLEGALES_ITEM> = data.reservaData.RESERVA.INPUT.TAB_REPRESENTANTESLEGALES ? [].concat(data.reservaData.RESERVA.INPUT.TAB_REPRESENTANTESLEGALES.item).filter(x => !!x) : [];
+    const datosPromocion: TAB_DATOSPROMOCION_ITEM = [].concat(data.reservaData.RESERVA.INPUT.TAB_DATOSPROMOCION.item).filter(x => !!x)[0];
+    const unidades: Array<TAB_UNIDADESVENTA_ITEM> = [].concat(data.reservaData.RESERVA.INPUT.TAB_UNIDADESVENTA.item).filter(x => !!x);
+    const nonAnnexedUnidades: Array<TAB_UNIDADESVENTA_ITEM> = unidades.filter(x => x.TIPOVINCULACION !== 'Registral');
+    const campanaspromocion: TAB_CAMPANASPROMOCION_ITEM = data.reservaData.RESERVA.INPUT.TAB_CAMPANASPROMOCION ? [].concat(data.reservaData.RESERVA.INPUT.TAB_CAMPANASPROMOCION.item).filter(x => !!x)[0] : null;
+    const priceTotal: number = unidades.map(x => Number(x.IMPORTEVENTA || 0)).reduce((total, curr) => total + curr, 0);
+    const descuento: number = (campanaspromocion && campanaspromocion.IMPORTEUNITARIO && campanaspromocion.IMPORTEUNITARIO > 0) ? Number(campanaspromocion.IMPORTEUNITARIO) : 0;
+    const priceTotal2: number = priceTotal - descuento
     return of({
         ...data.promotion,
         codigoReserva: codigoReserva,
         finishedPromotion: data.promotion.faseada ? 'yes' : 'no',
         cv: { genderCv: data.promotion.genderCv, nameCv: data.promotion.nameCv },
-        comprador: getReservaCompradores(compradores, representantes),
+        comprador: getCompradores(compradores, representantes),
 
-        // inmueble: getInmuebles(unidades),
+        ...getDivisionHorizontal(unidades, data.promotion.faseada, datosPromocion, descuento),
         horizontal: getHorizontal(data.promotion.escriturasPublicas),
         promocionNumberViviendas: datosPromocion.NVIVIENDAS,
         promocionNumberTrasteros: datosPromocion.NTRASTEROS,
         promocionNumberPlazas: datosPromocion.NGARAJES,
-        promocionNumberLocales: datosPromocion.NLOCALES
+        promocionNumberLocales: datosPromocion.NLOCALES,
+        priceTotal: priceTotal,
+        desglose: nonAnnexedUnidades.length > 1 ? 'yes' : 'no',
+        porcentajePrice: Number(datosReserva.CONTRATOCVRESERVA || 0),
+        porcentajePrice2: Number(datosReserva.CUOTARESERVA || 0),
+        porcentajePricePosterior: Number(datosReserva.ESCRITURARESERVA || 0),
+        amountTotal: priceTotal * 0.01 * Number(datosReserva.CONTRATOCVRESERVA || 0),
+        amountTotal2: priceTotal * 0.01 * Number(datosReserva.CUOTARESERVA || 0),
+        totalPosterior: priceTotal * 0.01 * Number(datosReserva.ESCRITURARESERVA || 0),
+        importeArras: Number(datosReserva.ARRASRESERVA || 0),
+        promocionAndalucia: ['almería', 'granada', 'málaga', 'jaén', 'córdoba', 'sevilla', 'cádiz', 'huelva'].includes(datosPromocion.PROVINCIA.toLowerCase()) ? 'yes' : 'no',
+        promocionCatalunya: ['barcelona', 'gerona', 'lérida', 'tarragona'].includes(datosPromocion.PROVINCIA.toLowerCase()) ? 'si' : 'no',
+        descuento: (campanaspromocion && campanaspromocion.IMPORTEUNITARIO && campanaspromocion.IMPORTEUNITARIO > 0) ? 'yes' : 'no',
+        importeBeneficio: descuento,
+        priceTotal2: priceTotal2,
+        amountTotalDescuento: priceTotal2 * 0.01 * Number(datosReserva.CONTRATOCVRESERVA || 0),
+        amountTotalDescuento2: priceTotal2 * 0.01 * Number(datosReserva.CUOTARESERVA || 0),
+        amountTotalDescuento3: priceTotal2 * 0.01 * Number(datosReserva.ESCRITURARESERVA || 0),
+    });
+}
+// 'Comunidad de Bienes', 'Gananciales'
+function getCompradores(compradores: Array<TAB_COMPRADORES_ITEM>, representantes: Array<TAB_REPRESENTANTESLEGALES_ITEM>) {
+    if (compradores[0] && compradores[0].ESTADOCIVIL === 'Casado/a' && ['Comunidad de Bienes', 'Gananciales'].includes(compradores[0].REGIMENPATRIMONIAL) && compradores.length === 2) {
+        return [{ ...getComprador(compradores[0], representantes), ...getConyuge(compradores[1]) }];
+    }
+    return compradores.map(
+        comprador => (getComprador(comprador, representantes))
+    )
+}
+
+function getComprador(comprador: TAB_COMPRADORES_ITEM, representantes: TAB_REPRESENTANTESLEGALES_ITEM[]): any {
+    const haveRepresentatives: boolean = representantes && representantes.length > 0
+    const admins: boolean = representantes.some(x => ['Administrador', 'Apoderado Cliente'].includes(x.TIPOREPRESENTANTELEGAL))
+    return {
+        compradorPercentage: comprador.PORCENTAJECOMPRA,
+        compradorPersonType: comprador.PERSONAFISICAJURIDICA === 'Persona Jurídica' ? 'legalPerson' : 'naturalPerson',
+        compradorRegimen: getCompradorRegimen(comprador.REGIMENPATRIMONIAL),
+        compradorRegimenSoltero: getMaritalStatus(comprador.ESTADOCIVIL),
+        compradorGender: ['Señora', 'Señorita', 'DOÑA'].includes(comprador.TRATAMIENTO) ? 'F' : 'M',
+        compradorName: comprador.CONTFULLNAME,
+        compradorPhoneNumber: comprador.CONTTELEPHONE1 || comprador.CONTTELEPHONE2 || comprador.CONTMOBILEPHONE,
+        compradorIdentificationType: comprador.PERSONAFISICAJURIDICA === 'Persona Jurídica' ? 'NIF' : 'DNI',
+        compradorIdentificationNumber: String(comprador.CONTDNI),
+        compradorEmail: comprador.CONTEMAILADDRESS1 || comprador.CONTEMAILADDRESS2,
+        compradorStreet: `${(comprador.CONTTIPOVIA || '').toLowerCase()} ${comprador.CONTADDRESS1_LINE1}`.trim(),
+        compradorCity: comprador.CONTCIUDAD,
+        compradorCP: comprador.CONTCODIGOPOSTAL,
+        nombreNotarioConstitucion: comprador.CONTNOMBRENOTARIO,
+        fechaConstitucion: moment(comprador.CONTFECHACONSTITUCION).valueOf(),
+        numeroProtocoloConstitucion: comprador.CONTNPROTOCOLO,
+        registryCityConstitucion: comprador.CONTREGISTROMERCANTIL,
+        tomoConstitucion: comprador.CONTTOMO,
+        libroConstitucion: comprador.CONTLIBRO,
+        folioConstitucion: comprador.CONTFOLIO,
+        hojaConstitucion: comprador.CONTHOJA,
+        compradorOwnName: haveRepresentatives ? 'Y' : 'N',
+        compradorTypeRepresentativePower: admins ? '' : 'jointAgent',
+        representado: representantes.length ? getRepresentante(representantes[0]) : {},
+        otherRepresentative: representantes.length ? getRepresentante(representantes[0]) : {},
+        newRepresentative: representantes.length ? getRepresentante(representantes[0]) : {},
+        ...(representantes.length ? getRepresentante(representantes[0]) : {})
+    };
+}
+
+function getRepresentante(representante: TAB_REPRESENTANTESLEGALES_ITEM) {
+    return {
+        generoRepreComprador: ['Señora', 'Señorita', 'DOÑA'].includes(representante.TRATAMIENTO) ? 'F' : 'M',
+        nombreRepreComprador: representante.CONTFULLNAME,
+        tipoIdentificacionRepreComprador: 'DNI',
+        numeroIdentificacionRepreComprador: String(representante.CONTDNI),
+        nombreNotarioRepreComprador: representante.NOMBRENOTARIO,
+        numeroProtocoloRepreComprador: representante.NUMEROPROTOCOLO,
+        lugarNotariaRepreComprador: representante.CIUDADNOTARIO,
+        fechaOtorgamientoRepreComprador: moment(representante.FECHAESCRITURACIONAPODERAMIENTO).valueOf()
+    }
+}
+
+function getConyuge(comprador: TAB_COMPRADORES_ITEM) {
+    return {
+        compradorGanacialesGender: ['Señora', 'Señorita', 'DOÑA'].includes(comprador.TRATAMIENTO) ? 'F' : 'M',
+        compradorGanacialesName: comprador.CONTFULLNAME,
+        compradorGanacialesIdentificationType: comprador.PERSONAFISICAJURIDICA === 'Persona Jurídica' ? 'NIF' : 'DNI',
+        compradorGanacialesIdentificationNumber: String(comprador.CONTDNI),
+        compradorGanacialesPhoneNumber: comprador.CONTTELEPHONE1 || comprador.CONTTELEPHONE2 || comprador.CONTMOBILEPHONE,
+        compradorGanacialesEmail: comprador.CONTEMAILADDRESS1 || comprador.CONTEMAILADDRESS2,
+    }
+}
+
+export function getHorizontal(escriturasPublicas: string) {
+    if (escriturasPublicas === 'ambas') {
+        return 'yes';
+    }
+    return 'no';
+}
+
+export function getDivisionHorizontal(inmuebles: Array<TAB_UNIDADESVENTA_ITEM>, promotionFaseada: boolean, datosPromocion: TAB_DATOSPROMOCION_ITEM, descuento: number): any {
+    const viviendas = inmuebles.filter(x => Number(x.CLASEUSO) === 1);
+    const nonAnnexedGarajes = inmuebles.filter(x => Number(x.CLASEUSO) === 2)
+        .filter(
+            inmueble => inmueble.TIPOVINCULACION !== 'Registral'
+        );
+    const annexedGarajes = inmuebles.filter(x => Number(x.CLASEUSO) === 2)
+        .filter(
+            inmueble => inmueble.TIPOVINCULACION === 'Registral'
+        );
+    const nonAnnexedTrasteros = inmuebles.filter(x => Number(x.CLASEUSO) === 3)
+        .filter(
+            inmueble => inmueble.TIPOVINCULACION !== 'Registral'
+        );
+    const annexedTrasteros = inmuebles.filter(x => Number(x.CLASEUSO) === 3)
+        .filter(
+            inmueble => inmueble.TIPOVINCULACION === 'Registral'
+        );
+    const garajes = nonAnnexedGarajes.filter(x => Number(x.SUBCLASEUSO) === 20);
+    const motos = nonAnnexedGarajes.filter(x => Number(x.SUBCLASEUSO) === 21);
+    const bicicletas = nonAnnexedGarajes.filter(x => Number(x.SUBCLASEUSO) === 23);
+    const locales = inmuebles.filter(x => Number(x.CLASEUSO) === 4);
+    const numeroRegistro = Number(datosPromocion.CODIGOPROMOCION.split('-')[1] || 0) || '';
+    const lugarRegistro = '';
+    return {
+        horizontalNoCheckActivos: {
+            activoVivienda: !!viviendas.length,
+            activoParking: !!garajes.length || !!motos.length || !!bicicletas.length,
+            activoTrastero: !!nonAnnexedTrasteros.length,
+            activoLocal: !!locales.length
+        },
+        casa: getViviendaHorizontal(viviendas, annexedGarajes, annexedTrasteros, descuento),
+        chequePlaza: {
+            plazaBicicleta: !!bicicletas.length,
+            plazaMotocicleta: !!motos.length,
+            plazaNormal: !!garajes.length,
+        },
+        bici: getVinculadoInmuebleHorizontal(bicicletas, annexedTrasteros, annexedGarajes),
+        moto: getVinculadoInmuebleHorizontal(motos, annexedTrasteros, annexedGarajes),
+        car: getVinculadoInmuebleHorizontal(garajes, annexedTrasteros, annexedGarajes),
+        park: getVinculadoInmuebleHorizontal(garajes, annexedTrasteros, annexedGarajes),
+        traster: getVinculadoInmuebleHorizontal(nonAnnexedTrasteros, annexedTrasteros, annexedGarajes),
+        local: getInmuebleHorizontal(locales, descuento)
+    };
+}
+
+function getInmuebleHorizontal(inmuebles: Array<TAB_UNIDADESVENTA_ITEM>, descuento: number) {
+    return inmuebles.map(inmueble => ({
+        horizontalPrice: Number(inmueble.IMPORTEVENTA || 0) - descuento,
+        horizontalNumber: inmueble.PUERTANUMERO,
+        horizontalSurface: Number(inmueble.SUPERFICIEMT2UTIL || 0),
+        horizontalSurfaceComunes: Number(inmueble.SUPERFICIEMT2CONS || 0),
+        horizontalTerraza: Number(inmueble.TIPOLOGIASUPERFICIEMT2UTILTERRAZA || 0) > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurface: Number(inmueble.TIPOLOGIASUPERFICIEMT2UTILTERRAZA || 0),
+        usoPrivativo: Number(0) > 0 ? 'yes' : 'no',
+        horizontalTerrazaSurfaceExterior: Number(0),
+        horizontalBlock: inmueble.BLOQUE,
+        horizontalStair: inmueble.ESCALERA,
+        horizontalPortal: inmueble.PORTAL,
+        horizontalFloor: inmueble.PLANTA,
+        horizontalDoor: inmueble.PUERTANUMERO,
+    }));
+}
+
+function getViviendaHorizontal(inmuebles: Array<TAB_UNIDADESVENTA_ITEM>, annexedGarajes: Array<TAB_UNIDADESVENTA_ITEM>, annexedTrasteros: Array<TAB_UNIDADESVENTA_ITEM>, descuento: number) {
+    return inmuebles.map(inmueble => {
+        const inmuebleAnnexedGaraje = annexedGarajes.filter(x => x.UVVINCULADA === inmueble.CUNUNID);
+        const inmuebleAnnexedTrasteros = annexedTrasteros.filter(x => x.UVVINCULADA === inmueble.CUNUNID);
+        const garajesPrice: number = inmuebleAnnexedGaraje.reduce((prev, curr) => prev + Number(curr.IMPORTEVENTA || 0), 0);
+        const trasterossPrice: number = inmuebleAnnexedTrasteros.reduce((prev, curr) => prev + Number(curr.IMPORTEVENTA || 0), 0);
+        return {
+            horizontalPrice: Number(inmueble.IMPORTEVENTA || 0) + garajesPrice + trasterossPrice - descuento,
+            horizontalNumber: inmueble.PUERTANUMERO,
+            horizontalSurface: Number(inmueble.SUPERFICIEMT2UTIL || 0),
+            horizontalSurfaceComunes: Number(inmueble.SUPERFICIEMT2CONS || 0),
+            horizontalTerraza: Number(inmueble.TIPOLOGIASUPERFICIEMT2UTILTERRAZA || 0) > 0 ? 'yes' : 'no',
+            horizontalTerrazaSurface: Number(inmueble.TIPOLOGIASUPERFICIEMT2UTILTERRAZA || 0),
+            usoPrivativo: Number(0) > 0 ? 'yes' : 'no',
+            horizontalTerrazaSurfaceExterior: Number(0),
+            horizontalBlock: inmueble.BLOQUE,
+            horizontalStair: inmueble.ESCALERA,
+            horizontalPortal: inmueble.PORTAL,
+            horizontalFloor: inmueble.PLANTA,
+            horizontalDoor: inmueble.PUERTANUMERO,
+            checkAnejos: {
+                addParking: !!inmuebleAnnexedGaraje.length,
+                addTrastero: !!inmuebleAnnexedTrasteros.length
+            },
+            anejoParking: getInmuebleHorizontal(inmuebleAnnexedGaraje, 0),
+            anejoTrastero: getInmuebleHorizontal(inmuebleAnnexedTrasteros, 0)
+        };
+    });
+}
+
+function getVinculadoInmuebleHorizontal(inmuebles: Array<TAB_UNIDADESVENTA_ITEM>, annexedTrasteros: Array<TAB_UNIDADESVENTA_ITEM>, annexedGarajes: Array<TAB_UNIDADESVENTA_ITEM>) {
+    return inmuebles.map(inmueble => {
+        const vinculadoAnnexedTrastero = annexedTrasteros.filter(x => x.UVVINCULADA === inmueble.CUNUNID);
+        const vinculadoAnnexedGaraje = annexedGarajes.filter(x => x.UVVINCULADA === inmueble.CUNUNID);
+        const trasterosPrice: number = vinculadoAnnexedTrastero.reduce((prev, curr) => prev + Number(curr.IMPORTEVENTA || 0), 0);
+        const garajesPrice: number = vinculadoAnnexedGaraje.reduce((prev, curr) => prev + Number(curr.IMPORTEVENTA || 0), 0);
+        console.log('vinculadoAnnexedTrastero', inmueble.CUNUNID, JSON.stringify(vinculadoAnnexedTrastero))
+        console.log('vinculadoAnnexedGaraje', inmueble.CUNUNID, JSON.stringify(vinculadoAnnexedGaraje))
+        return {
+            horizontalPrice: Number(inmueble.IMPORTEVENTA || 0) + trasterosPrice + garajesPrice,
+            horizontalNumber: inmueble.PUERTANUMERO,
+            horizontalSurface: Number(inmueble.SUPERFICIEMT2UTIL || 0),
+            horizontalSurfaceComunes: Number(inmueble.SUPERFICIEMT2CONS || 0),
+            horizontalTerraza: Number(inmueble.TIPOLOGIASUPERFICIEMT2UTILTERRAZA || 0) > 0 ? 'yes' : 'no',
+            horizontalTerrazaSurface: Number(inmueble.TIPOLOGIASUPERFICIEMT2UTILTERRAZA || 0),
+            usoPrivativo: Number(0) > 0 ? 'yes' : 'no',
+            horizontalTerrazaSurfaceExterior: Number(0),
+            horizontalBlock: inmueble.BLOQUE,
+            horizontalStair: inmueble.ESCALERA,
+            horizontalPortal: inmueble.PORTAL,
+            horizontalFloor: inmueble.PLANTA,
+            horizontalDoor: inmueble.PUERTANUMERO,
+            esAnejoCheck: {
+                trasteroAnejo: !!vinculadoAnnexedTrastero.length,
+                parkingAnejo: !!vinculadoAnnexedGaraje.length
+            },
+            datosTrastero: getInmuebleHorizontal(vinculadoAnnexedTrastero, 0),
+            anejoParking: getInmuebleHorizontal(vinculadoAnnexedGaraje, 0)
+        }
     });
 }
 
@@ -312,6 +535,7 @@ function getAddressData(config: AddressParams, oldJSON: any) {
 
 function getNaturalPersonData(config: NaturalPersonParams, oldJSON: any) {
     const resBlock = {};
+    console.log(`config ${JSON.stringify(config)}`);
     ['gender', 'name', 'lastName1', 'lastName2', 'nationality', 'identificationType', 'identificationNumber', 'phoneNumber', 'cellPhoneNumber', 'email', 'expeditionCountry', 'expirationDate', 'civilStatus', 'marriedStatus', 'profession', 'birthPlace', 'birthDate', 'ownName']
         .forEach(
             field => {
@@ -463,6 +687,7 @@ export interface INPUT {
     TAB_COMPRADORES?: TAB_COMPRADORES;
     TAB_REPRESENTANTESLEGALES?: TAB_REPRESENTANTESLEGALES;
     TAB_UNIDADESVENTA?: TAB_UNIDADESVENTA;
+    TAB_CAMPANASPROMOCION?: TAB_CAMPANASPROMOCION;
 }
 
 export interface TAB_DATOSRESERVA {
@@ -474,7 +699,10 @@ export interface TAB_DATOSRESERVA_ITEM {
     INTERES: string;
     CONTACTOVINCULADO: string;
     CONTACTO: string;
-    VENDEDOR: string;
+    ARRASRESERVA: string;
+    CONTRATOCVRESERVA: string;
+    CUOTARESERVA: string;
+    ESCRITURARESERVA: string;
 }
 
 export interface TAB_DATOSPROMOCION {
@@ -487,6 +715,7 @@ export interface TAB_DATOSPROMOCION_ITEM {
     NGARAJES: string | number;
     NLOCALES: string | number;
     CODIGOPROMOCION: string;
+    PROVINCIA: string;
 
 }
 
@@ -498,13 +727,18 @@ export interface TAB_COMPRADORES_ITEM {
     ROL: string;
     PORCENTAJECOMPRA: string | number;
     PERSONAFISICAJURIDICA: string;
+    REGIMENPATRIMONIAL: string;
     ESTADOCIVIL: string;
     TRATAMIENTO: string;
     CONTFULLNAME: string;
     CONTDNI: string;
+    CONTTIPOVIA: string;
     CONTADDRESS1_LINE1: string;
+    CONTCIUDAD: string;
+    CONTCODIGOPOSTAL: string;
     CONTTELEPHONE1: string;
     CONTTELEPHONE2: string;
+    CONTMOBILEPHONE: string;
     CONTEMAILADDRESS1: string;
     CONTEMAILADDRESS2: string;
     CONTNOMBRENOTARIO: string;
@@ -547,63 +781,66 @@ export interface TAB_UNIDADESVENTA {
 }
 
 export interface TAB_UNIDADESVENTA_ITEM {
-    BLOQUE: string | number;
-    PORTAL: string | number;
-    ESCALERA: string | number;
-    PLANTA: string | number;
-    PUERTANUMERO: string | number;
-    SUPERFICIEMT2UTIL: string | number;
-    SUPERFICIEMT2CONS: string | number;
+    // CLASEUSO
+    // 01 - Vivienda
+    // 04 - Local
+    // 06 - Oficina
+    CUNUNID: string;
+    CLASEUSO: number;
+    TIPOVIVIENDA: string;
+    SUBCLASEUSO: number;
+    TIPOLOGIASUPERFICIEMT2CONS: string;
+    TIPOLOGIASUPERFICIEMT2PARKING: string;
+    TIPOLOGIASUPERFICIEMT2CONSTRASTERO: string;
+    TIPOLOGIASUPERFICIEMT2PARCELA: string;
+    TIPOLOGIASUPERFICIEMT2: string;
+    TIPOLOGIASUPERFICIEMT2UTILJARDIN: string;
+    TIPOLOGIASUPERFICIEMT2UTILSOLARIUM: string;
+    TIPOLOGIASUPERFICIEMT2UTILTERRAZA: string;
+    TIPOVINCULACION: string;
+    UVVINCULADA: string;
+    IMPORTEVENTA: string;
+    BLOQUE: string;
+    PORTAL: string;
+    ESCALERA: string;
+    PLANTA: string;
+    PUERTANUMERO: string;
+    SUPERFICIEMT2UTIL: string;
+    SUPERFICIEMT2CONS: string;
 }
 
-function getReservaCompradores(compradores: Array<TAB_COMPRADORES_ITEM>, representantes: Array<TAB_REPRESENTANTESLEGALES_ITEM>): any {
-    return compradores.map(
-        comprador => ({
-            compradorPercentage: comprador.PORCENTAJECOMPRA,
-            compradorPersonType: comprador.PERSONAFISICAJURIDICA === 'Persona Jurídica' ? 'legalPerson' : 'naturalPerson',
-            compradorRegimen: getCompradorRegimen(comprador.ESTADOCIVIL),
-            compradorGender: comprador.TRATAMIENTO === 'Doña' ? 'F' : 'M',
-            compradorName: comprador.CONTFULLNAME,
-            compradorPhoneNumber: comprador.CONTTELEPHONE1,
-            compradorIdentificationNumber: comprador.CONTDNI,
-            compradorEmail: comprador.CONTEMAILADDRESS1,
-            compradorStreet: comprador.CONTADDRESS1_LINE1,
-            nombreNotarioConstitucion: comprador.CONTNOMBRENOTARIO,
-            fechaConstitucion: comprador.CONTFECHACONSTITUCION,
-            numeroProtocoloConstitucion: comprador.CONTNPROTOCOLO,
-            registryCityConstitucion: comprador.CONTREGISTROMERCANTIL,
-            tomoConstitucion: comprador.CONTTOMO,
-            libroConstitucion: comprador.CONTLIBRO,
-            folioConstitucion: comprador.CONTFOLIO,
-            hojaConstitucion: comprador.CONTHOJA,
-            compradorTypeRepresentativePower: representantes.some(x => x.TIPOREPRESENTANTELEGAL === 'Administrador') ? 'yes' : 'no',
-            representado: getCompradorRepresentates(representantes)
-        })
-    )
+export interface TAB_CAMPANASPROMOCION {
+    item?: TAB_CAMPANASPROMOCION_ITEM | Array<TAB_CAMPANASPROMOCION_ITEM>;
 }
 
-function getCompradorRepresentates(representantes: Array<TAB_REPRESENTANTESLEGALES_ITEM>): any {
-    return representantes.map(
-        representate => ({
-            compradorGender: representate.TRATAMIENTO === 'Doña' ? 'F' : 'M',
-            nombreRepreComprador: representate.CONTFULLNAME,
-            numeroIdentificacionRepreComprador: representate.CONTDNI,
-            nombreNotarioRepreComprador: representate.NOMBRENOTARIO,
-            numeroProtocoloRepreComprador: representate.NUMEROPROTOCOLO,
-            lugarNotariaRepreComprador: representate.CIUDADNOTARIO,
-            fechaOtorgamientoRepreComprador: moment(representate.FECHAESCRITURACIONAPODERAMIENTO, 'YYYY-MM-DD').valueOf()
-        })
-    )
+export interface TAB_CAMPANASPROMOCION_ITEM {
+    IMPORTEUNITARIO: number;
 }
 
 function getCompradorRegimen(estadoCivil: string): string {
     switch (estadoCivil) {
-        case 'Soltero/a':
-            return 'no';
-        case 'Regimen':
-            return 'regimen';
+        case 'Gananciales':
+            return 'gananciales';
+        case 'Comunidad de Bienes':
+            return 'comunidad';
+        case 'Separación de Bienes':
+            return 'separacion';
+        case 'Participacion':
+            return 'participacion';
         default:
             return 'no';
+    }
+}
+function getMaritalStatus(civilStatus: string): string {
+    switch (civilStatus) {
+        case 'Soltero/a':
+            return 'soltero';
+        case 'Divorciado/a':
+            return 'divorciado';
+        case 'Casado/a':
+            return 'casado';
+        default:
+            return 'soltero';
     }
 }
 
@@ -1124,7 +1361,7 @@ export function checkRepresentativeDataFields(config: RepresentativeDataParams, 
             }
         }
         if (config.marriedStatus && config.marriedStatus.present && config.marriedStatus.params.required && data.civilStatus === 'MARRIED') {
-            res.mergeFieldError(checkFieldRequired(data.marriedStatus, config.identificationNumber.importName, config.identificationNumber.params.title));
+            res.mergeFieldError(checkFieldRequired(data.marriedStatus, config.marriedStatus.importName, config.marriedStatus.params.title));
         }
     }
     if (res.blockError) {

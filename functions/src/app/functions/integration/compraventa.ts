@@ -79,7 +79,7 @@ export function getSAPData(codigoReserva: string): Observable<SAPData> {
                 result => result[0] as SAPData
             ),
             tap(
-                data => console.log('getWSData data', data)
+                data => console.log('getWSData data', JSON.stringify(data))
             ),
             switchMap(
                 data => {

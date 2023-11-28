@@ -4,6 +4,8 @@ export class PromotionHabitat {
     uid: string = '';
     active: boolean = false;
     activeForFinancial: boolean = false;
+    activeForLegalReserva: boolean = false;
+    activeForFinancialReserva: boolean = false;
     faseada: boolean = false;
     shareLicenciaObras: boolean = false;
     nombrePromocion: string = '';
@@ -84,6 +86,28 @@ export class PromotionHabitat {
     promocionNumberLocales: number = 0;
     promocionNumberTrasteros: number = 0;
     promocionNumberExpediente: string = '';
+    licencia: string = '';
+    afo: string = '';
+    notaryGender: string = '';
+    notaryName: string = '';
+    notaryLastName1: string = '';
+    grantingDate: string = '';
+    protocolNumber: string = '';
+    porcentajePrice: number = 0;
+    porcentajePrice2: number = 0;
+    porcentajePricePosterior: number = 0;
+    importeArras: number = 0;
+    avalesDH: string = '';
+    numeroTrimestre: string = '';
+    yearTrimestre: string = '';
+    importeBeneficio: number = 0;
+
+    generoNotarioActa: string = '';
+    nombreNotarioActa: string = '';
+    apellidoNotarioActa: string = '';
+    fechaNotarioActa: string = '';
+    protocoloNotarioActa: string = '';
+    ciudadNotarioActa: string = '';
     static extract(item: PromotionHabitat): any {
         return JSON.parse(JSON.stringify(item));
     }

@@ -1,10 +1,11 @@
 import axios, { AxiosResponse } from 'axios';
 import { Request, Response } from 'express';
 import { XMLParser } from 'fast-xml-parser';
-import { from, Observable, throwError } from 'rxjs';
+import * as admin from 'firebase-admin';
+import { combineLatest, from, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { Document } from '../../entities';
+import { Document, User } from '../../entities';
 import { LogInfo } from '../../entities/logInfo';
 import { getUserByEmail, setDocument } from '../../utils/firebase';
 import { errorResponse, getUniqueId, logMessage } from '../../utils/utils';
@@ -46,7 +47,7 @@ export const createReservaService = (request: Request, response: Response): Prom
         return response.status(500).json(errorResponse(logInfo, 'Código de promoción no informado'));
     }
 
-    return createDocument(codigoReserva, userEmail, codigoPromocion, requestId).pipe(
+    return createDocument(logInfo, codigoReserva, userEmail, codigoPromocion, requestId).pipe(
     ).toPromise()
         .then(
             data => {
@@ -65,37 +66,64 @@ export const createReservaService = (request: Request, response: Response): Prom
         );
 };
 
-function createDocument(codigoReserva: string, userEmail: string, codigoPromocion: string, requestId: string): Observable<{ creationTime: string, url: string, requestId: string }> {
+function createDocument(logInfo: LogInfo, codigoReserva: string, userEmail: string, codigoPromocion: string, requestId: string): Observable<{ creationTime: string, url: string, requestId: string }> {
     return getUserByEmail(userEmail)
         .pipe(
-            map(
-                user => ({
-                    ...new Document(),
-                    name: `Reserva - ${codigoReserva} - ${codigoPromocion}`,
-                    typeUid: environment.reservaModelUid,
-                    uid: getUniqueId(),
-                    creationTime: new Date().getTime(),
-                    userUid: user.uid,
-                    creationUserUid: user.uid,
-                    officeUid: user.officeUid,
-                    main: {},
-                    metadata: { codigoReserva: codigoReserva, codigoPromocion: codigoPromocion }
-                })
-            ),
             switchMap(
-                document => setDocument(document)
-                    .pipe(
-                        map(
-                            () => ({
-                                creationTime: moment(document.creationTime).toISOString(),
-                                url: `https://bigle-plataform-habitat.firebaseapp.com/Forms/Form/${document.uid}/1`,
-                                requestId: requestId
-                            })
+                user => {
+                    const document = getDocumentBody(codigoReserva, codigoPromocion, user);
+                    return combineLatest([
+                        // getPromotionHabitatByCodPromo(codigoPromocion),
+                        setDocument(document)
+                    ])
+                        .pipe(
+                            switchMap(
+                                ([promo]) => {
+                                    // if (promo.length === 1) {
+                                    //     return getReservaData(logInfo, document.uid, promo[0].uid, codigoReserva)
+                                    // }
+                                    return of(null);
+                                }
+                            ),
+                            switchMap(
+                                () => getToken(user.uid)
+                            ),
+                            map(
+                                (token) => ({
+                                    creationTime: moment(document.creationTime).toISOString(),
+                                    url: `https://bigle-plataform-habitat.firebaseapp.com/Forms/Form/${document.uid}/1?token=${token}`,
+                                    requestId: requestId
+                                })
+                            ),
+                            tap(
+                                res => console.log('res', JSON.stringify(res))
+                            )
                         )
-                    )
+                }
             )
         )
 }
+
+function getDocumentBody(codigoReserva: string, codigoPromocion: string, user: User): { name: string; typeUid: string; uid: string; creationTime: number; userUid: string; creationUserUid: string; officeUid: string; main: {}; metadata: { codigoReserva: string; codigoPromocion: string; }; modificationTime: number; modificationUserUid: string; notified: boolean; plataformCreated?: boolean; active?: boolean; deleted?: boolean; archived?: boolean; editing?: boolean; percentageCompleted?: number; projectUid?: string; vendor?: string; signaturitProcessId?: string; signaturitDocumentId?: string; signed?: boolean; category?: string; type?: string; percentage?: string; logo?: string; avatar?: string; doctypeImg?: string; stringyfied?: string; userName?: string; order?: number; statusName?: string; } {
+    return {
+        ...new Document(),
+        name: `Reserva - ${codigoReserva} - ${codigoPromocion}`,
+        typeUid: environment.reservaModelUid,
+        uid: getUniqueId(),
+        creationTime: new Date().getTime(),
+        userUid: user.uid,
+        creationUserUid: user.uid,
+        officeUid: user.officeUid,
+        main: {},
+        metadata: { codigoReserva: codigoReserva, codigoPromocion: codigoPromocion }
+    };
+}
+
+function getToken(userUid: string): Observable<string> {
+    return from(admin.auth().createCustomToken(userUid));
+}
+
+
 
 export const integrateReservaService = (request: Request, response: Response): Promise<any> => {
     const logInfo: LogInfo = new LogInfo('integrateReservaService', getUniqueId());
@@ -165,4 +193,3 @@ function callReservaWebService(codigoReserva): Promise<AxiosResponse<any, any>> 
     }
     return instance.post(environment.reserva.url, data);
 }
-
